@@ -17,14 +17,17 @@
       text-align: center;
       padding: 20px;
       box-sizing: border-box;
+      user-select: none;
     }
-    #title { font-size: 1.6rem; font-weight: bold; margin-bottom: 8px; color: #4fc3f7; }
+    #title { font-size: 1.5rem; font-weight: bold; margin-bottom: 10px; color: #4fc3f7; }
     #status { font-size: 0.95rem; color: #888; }
+    #syncInfo { font-size: 0.8rem; color: #555; margin-top: 15px; }
   </style>
 </head>
 <body>
   <div id="title">Loading Stream...</div>
   <div id="status">Syncing playback...</div>
+  <div id="syncInfo"></div>
   <audio id="player" preload="auto"></audio>
 
   <script>
@@ -36,22 +39,49 @@
     const audio = document.getElementById('player');
     const titleEl = document.getElementById('title');
     const statusEl = document.getElementById('status');
+    const syncInfoEl = document.getElementById('syncInfo');
+
+    function stopPreviousAudio() {
+      try {
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+      } catch (e) {
+        console.error("Cleanup error:", e);
+      }
+    }
 
     if (audioUrl) {
+      stopPreviousAudio();
+      
       titleEl.textContent = decodeURIComponent(songName);
       audio.src = audioUrl;
 
-      audio.addEventListener('loadedmetadata', function onMeta() {
+      const onMeta = function() {
         audio.removeEventListener('loadedmetadata', onMeta);
-        if (startTime > 0) {
+        
+        if (startTime > 0 && !isNaN(startTime)) {
           audio.currentTime = startTime;
         }
-        audio.play().then(() => {
-          statusEl.textContent = "Playing (Synced)";
-        }).catch(() => {
-          statusEl.textContent = "Click screen to enable audio";
-        });
+
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            statusEl.textContent = "Playing (Synced)";
+            syncInfoEl.textContent = "Offset: " + Math.round(startTime) + "s";
+          }).catch(err => {
+            statusEl.textContent = "Click screen to enable audio";
+          });
+        }
+      };
+
+      audio.addEventListener('loadedmetadata', onMeta);
+
+      // Gracefully handle playback ending
+      audio.addEventListener('ended', () => {
+        statusEl.textContent = "Track finished. Awaiting next...";
       });
+
     } else {
       titleEl.textContent = "No Track Specified";
       statusEl.textContent = "Awaiting signal from SL...";
