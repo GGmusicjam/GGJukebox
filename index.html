@@ -4,12 +4,7 @@
   <meta charset="UTF-8">
   <title>SL Synced Jukebox</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background-color: #0b0c10;
       color: #ffffff;
@@ -22,96 +17,81 @@
       width: 100vw;
       overflow: hidden;
       user-select: none;
+      cursor: pointer;
     }
-
     .player-card {
       background: #151821;
-      border: 2px solid #232a3b;
+      border: 3px solid #00e5ff;
       border-radius: 20px;
-      padding: 30px;
+      padding: 40px;
       width: 90%;
-      max-width: 700px;
+      max-width: 750px;
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
     }
-
-    /* Live Station Tag */
     .station-badge {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 6px 18px;
+      gap: 10px;
+      padding: 8px 20px;
       background: #0d2538;
       border: 1px solid #00e5ff;
       border-radius: 16px;
       color: #00e5ff;
-      font-size: 1rem;
+      font-size: 1.2rem;
       font-weight: bold;
       letter-spacing: 2px;
       margin-bottom: 20px;
     }
-
-    .pulse-dot {
-      width: 10px;
-      height: 10px;
-      background: #00e5ff;
-      border-radius: 50%;
-    }
-
-    /* Song Title */
+    .pulse-dot { width: 12px; height: 12px; background: #00e5ff; border-radius: 50%; }
     #title {
-      font-size: 2.2rem;
+      font-size: 2.6rem;
       font-weight: bold;
       color: #ffffff;
-      line-height: 1.25;
+      line-height: 1.2;
       margin-bottom: 20px;
       word-break: break-word;
     }
-
-    /* Sound Bars (Guaranteed to render in SL CEF) */
     .eq-container {
       display: flex;
       align-items: flex-end;
       justify-content: center;
-      gap: 8px;
-      height: 50px;
+      gap: 10px;
+      height: 70px;
       width: 100%;
-      margin: 15px 0;
+      margin: 20px 0;
     }
-
     .bar {
-      width: 10px;
-      height: 8px;
+      width: 16px;
+      height: 30px;
       background-color: #00e5ff;
-      border-radius: 4px;
+      border-radius: 6px;
     }
-
-    #status {
-      font-size: 1.1rem;
-      color: #798ba3;
+    #status { font-size: 1.3rem; color: #798ba3; margin-top: 15px; }
+    #unlockBanner {
+      display: none;
+      background: #ffaa00;
+      color: #000000;
+      font-weight: bold;
+      font-size: 1.4rem;
+      padding: 12px 24px;
+      border-radius: 12px;
       margin-top: 15px;
-    }
-
-    #syncInfo {
-      font-size: 0.85rem;
-      color: #485466;
-      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
   </style>
 </head>
-<body>
-
+<body onclick="userUnmute()">
   <div class="player-card">
     <div class="station-badge">
       <div class="pulse-dot"></div>
       <span>ON AIR</span>
     </div>
-
     <div id="title">Loading Stream...</div>
-
-    <div class="eq-container" id="eq">
+    <div class="eq-container">
       <div class="bar" id="b1"></div>
       <div class="bar" id="b2"></div>
       <div class="bar" id="b3"></div>
@@ -121,9 +101,8 @@
       <div class="bar" id="b7"></div>
       <div class="bar" id="b8"></div>
     </div>
-
     <div id="status">Syncing universal playback...</div>
-    <div id="syncInfo"></div>
+    <div id="unlockBanner">▶ Click Screen to Enable Sound</div>
   </div>
 
   <audio id="player" preload="auto"></audio>
@@ -137,33 +116,28 @@
     const audio = document.getElementById('player');
     const titleEl = document.getElementById('title');
     const statusEl = document.getElementById('status');
-    const syncInfoEl = document.getElementById('syncInfo');
+    const unlockEl = document.getElementById('unlockBanner');
     const bars = [
-      document.getElementById('b1'),
-      document.getElementById('b2'),
-      document.getElementById('b3'),
-      document.getElementById('b4'),
-      document.getElementById('b5'),
-      document.getElementById('b6'),
-      document.getElementById('b7'),
-      document.getElementById('b8')
+      document.getElementById('b1'), document.getElementById('b2'),
+      document.getElementById('b3'), document.getElementById('b4'),
+      document.getElementById('b5'), document.getElementById('b6'),
+      document.getElementById('b7'), document.getElementById('b8')
     ];
 
-    let animInterval = null;
+    setInterval(() => {
+      bars.forEach(bar => {
+        const h = Math.floor(Math.random() * 55) + 12;
+        bar.style.height = h + 'px';
+      });
+    }, 110);
 
-    function startVisualizer() {
-      if (animInterval) clearInterval(animInterval);
-      animInterval = setInterval(() => {
-        bars.forEach(bar => {
-          const h = Math.floor(Math.random() * 42) + 8;
-          bar.style.height = h + 'px';
+    function userUnmute() {
+      if (audio.paused && audioUrl) {
+        audio.play().then(() => {
+          unlockEl.style.display = "none";
+          statusEl.textContent = "Broadcasting Synced Audio";
         });
-      }, 120);
-    }
-
-    function stopVisualizer() {
-      if (animInterval) clearInterval(animInterval);
-      bars.forEach(bar => bar.style.height = '8px');
+      }
     }
 
     if (audioUrl) {
@@ -176,21 +150,12 @@
         }
         audio.play().then(() => {
           statusEl.textContent = "Broadcasting Synced Audio";
-          syncInfoEl.textContent = "Offset: " + Math.round(startTime) + "s";
-          startVisualizer();
+          unlockEl.style.display = "none";
         }).catch(() => {
-          statusEl.textContent = "Audio ready";
+          statusEl.textContent = "Viewer browser blocked sound autoplay";
+          unlockEl.style.display = "block";
         });
       }, { once: true });
-
-      audio.addEventListener('ended', () => {
-        statusEl.textContent = "Track finished. Awaiting next...";
-        stopVisualizer();
-      });
-
-    } else {
-      titleEl.textContent = "Jukebox Standby";
-      statusEl.textContent = "Awaiting signal from SL...";
     }
   </script>
 </body>
