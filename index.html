@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SL Synced Jukebox</title>
+  <style>
+    body {
+      background: #0f0f14;
+      color: #e0e0e0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    #title { font-size: 1.6rem; font-weight: bold; margin-bottom: 8px; color: #4fc3f7; }
+    #status { font-size: 0.95rem; color: #888; }
+  </style>
+</head>
+<body>
+  <div id="title">Loading Stream...</div>
+  <div id="status">Syncing playback...</div>
+  <audio id="player" preload="auto"></audio>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const audioUrl = params.get('url');
+    const songName = params.get('name') || "Now Playing";
+    const startTime = parseFloat(params.get('t') || "0");
+
+    const audio = document.getElementById('player');
+    const titleEl = document.getElementById('title');
+    const statusEl = document.getElementById('status');
+
+    if (audioUrl) {
+      titleEl.textContent = decodeURIComponent(songName);
+      audio.src = audioUrl;
+
+      audio.addEventListener('loadedmetadata', function onMeta() {
+        audio.removeEventListener('loadedmetadata', onMeta);
+        if (startTime > 0) {
+          audio.currentTime = startTime;
+        }
+        audio.play().then(() => {
+          statusEl.textContent = "Playing (Synced)";
+        }).catch(() => {
+          statusEl.textContent = "Click screen to enable audio";
+        });
+      });
+    } else {
+      titleEl.textContent = "No Track Specified";
+      statusEl.textContent = "Awaiting signal from SL...";
+    }
+  </script>
+</body>
+</html>
