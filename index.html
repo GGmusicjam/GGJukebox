@@ -22,7 +22,6 @@
       cursor: pointer;
     }
 
-    /* Main Frame */
     .deck-frame {
       width: 100%;
       height: 100%;
@@ -39,7 +38,6 @@
       transition: box-shadow 0.05s ease, border-color 0.05s ease;
     }
 
-    /* Top Bar */
     .top-bar {
       display: flex;
       align-items: center;
@@ -79,7 +77,6 @@
       letter-spacing: 1px;
     }
 
-    /* Mid Row: Title & Shifted Stylized GG */
     .mid-header-row {
       display: flex;
       align-items: center;
@@ -101,7 +98,6 @@
       flex: 1;
     }
 
-    /* Stylized Cyber GG Core */
     .gg-emblem-wrap {
       display: flex;
       align-items: center;
@@ -109,7 +105,7 @@
       width: 76px;
       height: 76px;
       min-width: 76px;
-      margin-right: 25px; /* Noticeably shifted left */
+      margin-right: 25px;
       border-radius: 50%;
       border: 3px solid #ff0044;
       background: radial-gradient(circle at 35% 35%, #3d0a47 0%, #0d0718 100%);
@@ -137,7 +133,6 @@
       text-shadow: 0 0 10px #ff0044, 0 0 20px #9d00ff, 0 0 30px #00f0ff;
     }
 
-    /* Visualizer Canvas */
     #visualStage {
       width: 100%;
       height: 250px;
@@ -147,7 +142,6 @@
       display: block;
     }
 
-    /* Timeline Progress */
     .progress-wrap {
       width: 100%;
       display: flex;
@@ -180,7 +174,6 @@
       color: #79718a;
     }
 
-    /* Visitor Modal */
     #clickOverlay {
       position: absolute;
       top: 0;
@@ -213,12 +206,10 @@
 <body onclick="handleUserUnlock()">
 
   <div class="deck-frame" id="frameBox">
-    <!-- Overlay for Muted Visitors -->
     <div id="clickOverlay" style="display: none;">
       <div class="click-btn">🔊 CLICK TO TUNE IN</div>
     </div>
 
-    <!-- Header -->
     <div class="top-bar">
       <div class="badge-pill">
         <div class="pulse-dot"></div>
@@ -227,7 +218,6 @@
       <div class="sync-counter" id="timeDisplay">0:00 / 0:00</div>
     </div>
 
-    <!-- Mid Row: Title & Shifted GG -->
     <div class="mid-header-row">
       <div id="title">JUKEBOX STANDBY</div>
       <div class="gg-emblem-wrap" id="ggBadge">
@@ -235,16 +225,14 @@
       </div>
     </div>
 
-    <!-- Bouncy High-Dynamic Range Canvas -->
     <canvas id="visualStage" width="800" height="340"></canvas>
 
-    <!-- Progress Timeline -->
     <div class="progress-wrap">
       <div class="progress-bar-bg">
         <div class="progress-bar-fill" id="progressFill"></div>
       </div>
       <div class="bottom-info">
-        <span id="status">SYNCHRONIZED DECK ACTIVE</span>
+        <span id="status">BUFFERING STREAM...</span>
         <span>GG AUDIO ENGINE</span>
       </div>
     </div>
@@ -269,12 +257,12 @@
     var canvas = document.getElementById('visualStage');
     var ctx = canvas.getContext('2d');
 
-    // 22 Equalizer Bars
     var NUM_BARS = 22;
     var peaks = new Array(NUM_BARS).fill(0);
     var currentHeights = new Array(NUM_BARS).fill(6);
+    var seekDone = false;
 
-    // Audio Context Setup
+    // Audio Context Setup (Safe Mode: No CORS locking)
     var audioCtx = null;
     var analyser = null;
     var source = null;
@@ -288,25 +276,30 @@
         if (AudioContextClass) {
           audioCtx = new AudioContextClass();
           analyser = audioCtx.createAnalyser();
-          analyser.fftSize = 256; // 128 high-accuracy bins
-          analyser.smoothingTimeConstant = 0.40; // Extremely snappy attack
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.40;
           freqData = new Uint8Array(analyser.frequencyBinCount);
 
-          audio.crossOrigin = "anonymous";
+          // Connect directly without crossOrigin='anonymous' to allow all hosts (Dropbox, etc.)
           source = audioCtx.createMediaElementSource(audio);
           source.connect(analyser);
           analyser.connect(audioCtx.destination);
           isAudioContextReady = true;
         }
       } catch (e) {
+        // Direct stream continues even if frequency access is restricted
         isAudioContextReady = false;
       }
     }
 
     function formatTime(sec) {
       if (isNaN(sec) || sec < 0) return "0:00";
-      var m = Math.floor(sec / 60);
+      var h = Math.floor(sec / 3600);
+      var m = Math.floor((sec % 3600) / 60);
       var s = Math.floor(sec % 60);
+      if (h > 0) {
+        return h + ":" + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+      }
       return m + ":" + (s < 10 ? "0" : "") + s;
     }
 
@@ -323,94 +316,71 @@
         for (var k = 0; k < freqData.length; k++) { sum += freqData[k]; }
         if (sum > 0) {
           hasRealData = true;
-          // Punchy sub-bass gated extraction (bins 2 to 5)
           var rawBass = (freqData[2] + freqData[3] + freqData[4] + freqData[5]) / 4;
-          // Bass Gate: ignore idle hum under 85
           bassLevel = Math.max(0, (rawBass - 85) / (255 - 85)) * 255;
         }
-      } else if (!audio.paused) {
-        bassLevel = Math.random() > 0.6 ? Math.floor(Math.random() * 200) + 55 : 0;
       }
 
-      // ==========================================
-      // GG BASS CORE (Calm on Breakdown, Explodes on Drops)
-      // ==========================================
+      // Dynamic Beat Fallback for Dropbox / External Streams
+      if (!hasRealData && !audio.paused) {
+        bassLevel = (Math.random() > 0.45) ? Math.floor(Math.random() * 190) + 60 : 20;
+      }
+
       var normalizedBass = bassLevel / 255;
-      // Exponential curve: stays 1.0 on calm sections, spikes up to 1.55 on heavy kicks
-      var pulseScale = 1.0 + Math.pow(normalizedBass, 2.2) * 0.55;
+      var pulseScale = 1.0 + Math.pow(normalizedBass, 2.0) * 0.45;
 
       ggBadge.style.transform = "scale(" + pulseScale + ")";
-      if (bassLevel > 175) {
+      if (bassLevel > 160) {
         ggBadge.style.borderColor = '#00f0ff';
-        ggBadge.style.boxShadow = "0 0 35px #00f0ff, 0 0 65px #ff0044";
+        ggBadge.style.boxShadow = "0 0 30px #00f0ff, 0 0 50px #ff0044";
       } else {
         ggBadge.style.borderColor = (bassLevel > 80) ? '#ff0044' : '#9d00ff';
-        ggBadge.style.boxShadow = "0 0 " + Math.floor(normalizedBass * 30 + 12) + "px rgba(255, 0, 68, 0.8)";
+        ggBadge.style.boxShadow = "0 0 " + Math.floor(normalizedBass * 25 + 10) + "px rgba(255, 0, 68, 0.7)";
       }
 
-      var frameGlow = Math.floor(normalizedBass * 40) + 12;
+      var frameGlow = Math.floor(normalizedBass * 35) + 12;
       frameBox.style.boxShadow = "0 0 " + frameGlow + "px rgba(255, 0, 68, 0.4)";
 
-      // ==========================================
-      // EXPANDED DYNAMIC EQUALIZER (No Halfway Hovering)
-      // ==========================================
       var spacing = 8;
       var totalSpacing = spacing * (NUM_BARS + 1);
       var barWidth = (canvas.width - totalSpacing) / NUM_BARS;
       var maxBarHeight = canvas.height - 35;
 
-      // Noise floor gate threshold (removes constant ambient synth/reverb bleed)
-      var NOISE_FLOOR = 72;
-      var ACTIVE_RANGE = 255 - NOISE_FLOOR;
-
       for (var i = 0; i < NUM_BARS; i++) {
         var targetHeight = 6;
 
         if (hasRealData) {
-          // Logarithmic bin distribution across 128 bins (starts cleanly at bin 2)
           var logIndex = Math.floor(Math.pow(i / (NUM_BARS - 1), 1.7) * (freqData.length - 8)) + 2;
           var rawVal = freqData[logIndex] || 0;
-
-          // Subtract noise floor so quiet parts drop to 0
-          var gatedVal = Math.max(0, rawVal - NOISE_FLOOR);
-          var cleanNormalized = gatedVal / ACTIVE_RANGE;
-
-          // Treble curve boost for crisp hi-hat response
+          var gatedVal = Math.max(0, rawVal - 72);
+          var cleanNormalized = gatedVal / (255 - 72);
           var trebleCompensation = 1.0 + (i / NUM_BARS) * 0.45;
           var boosted = Math.min(cleanNormalized * trebleCompensation, 1.0);
-
-          // Steep dynamic expansion curve (2.4 power): calm stays <10%, drops hit 100%
           targetHeight = Math.pow(boosted, 2.4) * maxBarHeight + 6;
-        } else {
-          if (!audio.paused) {
-            targetHeight = (Math.random() > 0.4) ? (Math.random() * maxBarHeight * 0.85) + 8 : 6;
-          }
+        } else if (!audio.paused) {
+          targetHeight = (Math.random() > 0.35) ? (Math.random() * maxBarHeight * 0.85) + 8 : 6;
         }
 
-        // Instant Attack / Lightning Release physics
         if (targetHeight > currentHeights[i]) {
-          currentHeights[i] = targetHeight; // Instant snap
+          currentHeights[i] = targetHeight;
         } else {
-          currentHeights[i] -= 16.0; // Rapid drop between beats
+          currentHeights[i] -= 15.0;
           if (currentHeights[i] < 6) currentHeights[i] = 6;
         }
 
-        // Peak Hold Caps
         if (currentHeights[i] >= peaks[i]) {
           peaks[i] = currentHeights[i];
         } else {
-          peaks[i] -= 4.2; // Smooth peak gravity fall
+          peaks[i] -= 4.0;
           if (peaks[i] < 6) peaks[i] = 6;
         }
 
         var x = spacing + i * (barWidth + spacing);
         var y = canvas.height - currentHeights[i] - 8;
 
-        // Alternate Hot Neon Red (#ff0044) & Vivid Electric Purple (#9d00ff)
         ctx.fillStyle = (i % 2 === 0) ? '#ff0044' : '#9d00ff';
         ctx.fillRect(x, y, barWidth, currentHeights[i]);
 
-        // White Peak Cap (only visible when bar is active)
         if (peaks[i] > 10) {
           ctx.fillStyle = '#ffffff';
           var peakY = canvas.height - peaks[i] - 13;
@@ -419,7 +389,6 @@
         }
       }
 
-      // Update Timeline & Counter
       if (audio.duration && !isNaN(audio.duration)) {
         var pct = (audio.currentTime / audio.duration) * 100;
         progressFill.style.width = pct + "%";
@@ -437,10 +406,6 @@
         audioCtx.resume();
       }
 
-      if (startTime > 0 && !isNaN(startTime)) {
-        audio.currentTime = startTime;
-      }
-
       audio.play().then(function() {
         overlayEl.style.display = "none";
         statusEl.textContent = "SYNCHRONIZED BROADCAST ACTIVE";
@@ -456,11 +421,30 @@
 
     if (audioUrl) {
       titleEl.textContent = decodeURIComponent(songName);
-      audio.src = audioUrl;
+      
+      // Auto-convert standard Dropbox URLs if passed directly
+      var streamUrl = audioUrl.replace("www.dropbox.com", "dl.dropboxusercontent.com").replace("?dl=0", "").replace("&dl=0", "");
+      audio.src = streamUrl;
 
+      // Handle seeking on large 6-hour streams smoothly
       audio.addEventListener('loadedmetadata', function() {
+        if (!seekDone && startTime > 0 && !isNaN(startTime)) {
+          audio.currentTime = startTime;
+          seekDone = true;
+        }
         startPlayback();
-      }, { once: true });
+      });
+
+      audio.addEventListener('canplay', function() {
+        if (!seekDone && startTime > 0 && !isNaN(startTime)) {
+          audio.currentTime = startTime;
+          seekDone = true;
+        }
+      });
+
+      audio.addEventListener('error', function(e) {
+        statusEl.textContent = "STREAM ERROR: CANNOT ACCESS AUDIO URL";
+      });
     }
   </script>
 </body>
