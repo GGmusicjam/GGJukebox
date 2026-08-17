@@ -5,10 +5,11 @@
   <title>SL Synced Jukebox</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
     body {
       background-color: #0b0c10;
       color: #ffffff;
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Arial, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -19,10 +20,12 @@
       user-select: none;
       cursor: pointer;
     }
+
+    /* Main Jukebox Card */
     .player-card {
       background: #151821;
       border: 3px solid #00e5ff;
-      border-radius: 20px;
+      border-radius: 24px;
       padding: 40px;
       width: 90%;
       max-width: 750px;
@@ -30,30 +33,42 @@
       flex-direction: column;
       align-items: center;
       text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 229, 255, 0.2);
     }
+
     .station-badge {
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      padding: 8px 20px;
+      padding: 8px 22px;
       background: #0d2538;
       border: 1px solid #00e5ff;
-      border-radius: 16px;
+      border-radius: 20px;
       color: #00e5ff;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: bold;
       letter-spacing: 2px;
       margin-bottom: 20px;
     }
-    .pulse-dot { width: 12px; height: 12px; background: #00e5ff; border-radius: 50%; }
+
+    .pulse-dot {
+      width: 12px;
+      height: 12px;
+      background: #00e5ff;
+      border-radius: 50%;
+      box-shadow: 0 0 12px #00e5ff;
+    }
+
     #title {
-      font-size: 2.6rem;
-      font-weight: bold;
+      font-size: 2.5rem;
+      font-weight: 800;
       color: #ffffff;
-      line-height: 1.2;
+      line-height: 1.25;
       margin-bottom: 20px;
       word-break: break-word;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
     }
+
     .eq-container {
       display: flex;
       align-items: flex-end;
@@ -63,28 +78,83 @@
       width: 100%;
       margin: 20px 0;
     }
+
     .bar {
       width: 16px;
       height: 30px;
-      background-color: #00e5ff;
+      background: linear-gradient(to top, #0077ff, #00e5ff);
       border-radius: 6px;
     }
-    #status { font-size: 1.3rem; color: #798ba3; margin-top: 15px; }
-    #unlockBanner {
-      display: none;
-      background: #ffaa00;
-      color: #000000;
-      font-weight: bold;
-      font-size: 1.4rem;
-      padding: 12px 24px;
+
+    #status {
+      font-size: 1.25rem;
+      color: #8fa0b5;
+      margin-top: 10px;
+    }
+
+    /* CENTERED PERMISSIONS MODAL OVERLAY */
+    #permissionModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(11, 12, 16, 0.88);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-box {
+      background: #1c2130;
+      border: 3px solid #00e5ff;
+      border-radius: 20px;
+      padding: 35px 50px;
+      text-align: center;
+      max-width: 580px;
+      box-shadow: 0 0 50px rgba(0, 229, 255, 0.4);
+      animation: floatPulse 2s infinite ease-in-out;
+    }
+
+    @keyframes floatPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+    }
+
+    .modal-icon { font-size: 3.5rem; margin-bottom: 12px; }
+    .modal-title { font-size: 2rem; font-weight: bold; color: #ffffff; margin-bottom: 10px; }
+    .modal-sub { font-size: 1.2rem; color: #a4b4c7; margin-bottom: 25px; line-height: 1.4; }
+    
+    .modal-btn {
+      display: inline-block;
+      background: #00e5ff;
+      color: #0b0c10;
+      font-size: 1.3rem;
+      font-weight: 800;
+      padding: 14px 32px;
       border-radius: 12px;
-      margin-top: 15px;
       text-transform: uppercase;
       letter-spacing: 1px;
+      box-shadow: 0 4px 15px rgba(0, 229, 255, 0.5);
     }
   </style>
 </head>
-<body onclick="userUnmute()">
+<body onclick="handleUserClick()">
+
+  <!-- Centered Permissions / Click-To-Listen Box -->
+  <div id="permissionModal">
+    <div class="modal-box">
+      <div class="modal-icon">🔊</div>
+      <div class="modal-title">Live Audio Stream</div>
+      <div class="modal-sub">Click anywhere on the screen to enable sound and tune in!</div>
+      <div class="modal-btn">▶ Enable Audio</div>
+    </div>
+  </div>
+
+  <!-- Player Board -->
   <div class="player-card">
     <div class="station-badge">
       <div class="pulse-dot"></div>
@@ -102,7 +172,6 @@
       <div class="bar" id="b8"></div>
     </div>
     <div id="status">Syncing universal playback...</div>
-    <div id="unlockBanner">▶ Click Screen to Enable Sound</div>
   </div>
 
   <audio id="player" preload="auto"></audio>
@@ -116,7 +185,7 @@
     const audio = document.getElementById('player');
     const titleEl = document.getElementById('title');
     const statusEl = document.getElementById('status');
-    const unlockEl = document.getElementById('unlockBanner');
+    const modalEl = document.getElementById('permissionModal');
     const bars = [
       document.getElementById('b1'), document.getElementById('b2'),
       document.getElementById('b3'), document.getElementById('b4'),
@@ -124,6 +193,7 @@
       document.getElementById('b7'), document.getElementById('b8')
     ];
 
+    // Constant bouncing visualizer
     setInterval(() => {
       bars.forEach(bar => {
         const h = Math.floor(Math.random() * 55) + 12;
@@ -131,13 +201,23 @@
       });
     }, 110);
 
-    function userUnmute() {
-      if (audio.paused && audioUrl) {
-        audio.play().then(() => {
-          unlockEl.style.display = "none";
-          statusEl.textContent = "Broadcasting Synced Audio";
-        });
+    function startPlayback() {
+      if (!audioUrl) return;
+      
+      if (startTime > 0 && !isNaN(startTime)) {
+        audio.currentTime = startTime;
       }
+
+      audio.play().then(() => {
+        modalEl.style.display = "none";
+        statusEl.textContent = "Broadcasting Synced Audio";
+      }).catch(err => {
+        modalEl.style.display = "flex";
+      });
+    }
+
+    function handleUserClick() {
+      startPlayback();
     }
 
     if (audioUrl) {
@@ -145,17 +225,12 @@
       audio.src = audioUrl;
 
       audio.addEventListener('loadedmetadata', () => {
-        if (startTime > 0 && !isNaN(startTime)) {
-          audio.currentTime = startTime;
-        }
-        audio.play().then(() => {
-          statusEl.textContent = "Broadcasting Synced Audio";
-          unlockEl.style.display = "none";
-        }).catch(() => {
-          statusEl.textContent = "Viewer browser blocked sound autoplay";
-          unlockEl.style.display = "block";
-        });
+        startPlayback();
       }, { once: true });
+    } else {
+      titleEl.textContent = "Jukebox Standby";
+      statusEl.textContent = "Awaiting signal from SL...";
+      modalEl.style.display = "none";
     }
   </script>
 </body>
