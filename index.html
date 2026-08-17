@@ -22,18 +22,18 @@
       cursor: pointer;
     }
 
-    /* Main Deck Frame with Red/Purple Reactive Glow */
+    /* Main Frame */
     .deck-frame {
       width: 100%;
       height: 100%;
       border: 4px solid #ff0044;
-      border-radius: 20px;
+      border-radius: 22px;
       background-color: #0b0c12;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 20px;
+      padding: 16px 22px;
       position: relative;
       box-shadow: 0 0 25px rgba(255, 0, 68, 0.3);
       transition: box-shadow 0.08s ease, border-color 0.08s ease;
@@ -45,7 +45,7 @@
       align-items: center;
       justify-content: space-between;
       width: 100%;
-      padding: 0 6px;
+      padding: 0 4px;
     }
 
     .badge-pill {
@@ -73,27 +73,58 @@
     }
 
     .sync-counter {
-      font-size: 1rem;
+      font-size: 1.05rem;
       color: #b537f2;
       font-weight: bold;
       letter-spacing: 1px;
     }
 
-    /* Song Title */
-    #title {
-      font-size: 2.2rem;
-      font-weight: 900;
-      color: #ffffff;
-      text-align: center;
-      line-height: 1.1;
-      text-transform: uppercase;
-      word-break: break-word;
-      max-width: 95%;
+    /* Mid Row: Title on Left, Big GG Emblem on Right */
+    .mid-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 15px;
       margin: 4px 0;
-      text-shadow: 0 0 15px rgba(181, 55, 242, 0.7);
     }
 
-    /* Extra Tall Visualizer Stage (3x Vertical Room) */
+    #title {
+      font-size: 2.1rem;
+      font-weight: 900;
+      color: #ffffff;
+      line-height: 1.15;
+      text-transform: uppercase;
+      word-break: break-word;
+      text-shadow: 0 0 16px rgba(181, 55, 242, 0.7);
+      flex: 1;
+    }
+
+    /* Big Glowing GG Badge */
+    .gg-emblem-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 68px;
+      height: 68px;
+      min-width: 68px;
+      border-radius: 50%;
+      border: 3px solid #ff0044;
+      background: radial-gradient(circle, #25092b 0%, #0c0814 100%);
+      box-shadow: 0 0 20px rgba(255, 0, 68, 0.6), inset 0 0 12px rgba(157, 0, 255, 0.5);
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+
+    .gg-emblem-text {
+      font-family: 'Arial Black', Impact, sans-serif;
+      font-size: 1.9rem;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px #ff0044, 0 0 20px #9d00ff;
+    }
+
+    /* Extra Tall Visualizer Stage */
     #visualStage {
       width: 100%;
       height: 250px;
@@ -148,7 +179,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      border-radius: 18px;
+      border-radius: 20px;
       z-index: 100;
     }
 
@@ -163,19 +194,13 @@
       font-weight: 900;
       letter-spacing: 2px;
       box-shadow: 0 0 35px rgba(255, 0, 68, 0.8);
-      animation: pulseBtn 1.5s infinite ease-in-out;
-    }
-
-    @keyframes pulseBtn {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
     }
   </style>
 </head>
 <body onclick="handleUserUnlock()">
 
   <div class="deck-frame" id="frameBox">
-    <!-- Modal for Muted Guests -->
+    <!-- Overlay for Muted Visitors -->
     <div id="clickOverlay" style="display: none;">
       <div class="click-btn">🔊 CLICK TO TUNE IN</div>
     </div>
@@ -189,10 +214,15 @@
       <div class="sync-counter" id="timeDisplay">0:00 / 0:00</div>
     </div>
 
-    <!-- Song Title -->
-    <div id="title">JUKEBOX STANDBY</div>
+    <!-- Mid Row: Title & Large Pulsing GG Emblem -->
+    <div class="mid-header-row">
+      <div id="title">JUKEBOX STANDBY</div>
+      <div class="gg-emblem-wrap" id="ggBadge">
+        <span class="gg-emblem-text">GG</span>
+      </div>
+    </div>
 
-    <!-- High-Clearance Canvas Visualizer -->
+    <!-- Canvas Visualizer -->
     <canvas id="visualStage" width="800" height="340"></canvas>
 
     <!-- Progress Timeline -->
@@ -222,15 +252,16 @@
     var progressFill = document.getElementById('progressFill');
     var overlayEl = document.getElementById('clickOverlay');
     var frameBox = document.getElementById('frameBox');
+    var ggBadge = document.getElementById('ggBadge');
     var canvas = document.getElementById('visualStage');
     var ctx = canvas.getContext('2d');
 
     // Visualizer variables
     var NUM_BARS = 22;
     var peaks = new Array(NUM_BARS).fill(0);
-    var syntheticHeights = new Array(NUM_BARS).fill(15);
+    var currentHeights = new Array(NUM_BARS).fill(12);
 
-    // Audio Context Setup
+    // Web Audio Context
     var audioCtx = null;
     var analyser = null;
     var source = null;
@@ -245,7 +276,7 @@
           audioCtx = new AudioContextClass();
           analyser = audioCtx.createAnalyser();
           analyser.fftSize = 64;
-          analyser.smoothingTimeConstant = 0.75;
+          analyser.smoothingTimeConstant = 0.85; // Extra smooth damping
           freqData = new Uint8Array(analyser.frequencyBinCount);
 
           audio.crossOrigin = "anonymous";
@@ -282,87 +313,66 @@
           bassLevel = (freqData[0] + freqData[1] + freqData[2]) / 3;
         }
       } else if (!audio.paused) {
-        // Fallback bass simulation
-        bassLevel = Math.floor(Math.random() * 120) + 40;
+        bassLevel = Math.floor(Math.random() * 80) + 30;
       }
 
-      // Dynamic Frame Border Glow based on Bass
-      var glowIntensity = Math.floor((bassLevel / 255) * 50) + 15;
-      frameBox.style.boxShadow = "0 0 " + glowIntensity + "px rgba(255, 0, 68, 0.5)";
+      // Dynamic Frame & GG Pulse Scaling
+      var pulseScale = 1.0 + (bassLevel / 255) * 0.35;
+      ggBadge.style.transform = "scale(" + pulseScale + ")";
+      ggBadge.style.borderColor = (bassLevel > 130) ? '#ff0044' : '#9d00ff';
+      ggBadge.style.boxShadow = "0 0 " + Math.floor((bassLevel / 255) * 30 + 15) + "px rgba(255, 0, 68, 0.7)";
 
-      // ==========================================
-      // DRAW DEDICATED PULSING "GG" EMBLEM (Top-Right)
-      // ==========================================
-      var ggScale = 1.0 + (bassLevel / 255) * 0.28;
-      var ggX = canvas.width - 65;
-      var ggY = 48;
+      var frameGlow = Math.floor((bassLevel / 255) * 35) + 15;
+      frameBox.style.boxShadow = "0 0 " + frameGlow + "px rgba(255, 0, 68, 0.4)";
 
-      ctx.save();
-      ctx.translate(ggX, ggY);
-      ctx.scale(ggScale, ggScale);
-
-      // Outer glowing ring
-      ctx.strokeStyle = (bassLevel > 130) ? '#ff0044' : '#9d00ff';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(0, 0, 24, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Inner GG text
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '900 20px "Arial Black", Impact, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText("GG", 0, 1);
-      ctx.restore();
-
-      // ==========================================
-      // RENDER TALL EQUALIZER BARS (Red & Purple)
-      // ==========================================
+      // Heavy Equalizer Parameters
       var spacing = 8;
       var totalSpacing = spacing * (NUM_BARS + 1);
       var barWidth = (canvas.width - totalSpacing) / NUM_BARS;
-      var maxBarHeight = canvas.height - 40; // Full 3x vertical sweep range
+      // Headroom factor: max 72% height so bars stay grounded with heavy travel
+      var maxHeadroom = (canvas.height - 30) * 0.72;
 
       for (var i = 0; i < NUM_BARS; i++) {
-        var barHeight = 12;
+        var targetHeight = 10;
 
         if (hasRealData) {
           var dataIndex = Math.floor((i / NUM_BARS) * freqData.length);
-          var val = freqData[dataIndex] || 0;
-          barHeight = (val / 255) * maxBarHeight + 10;
+          var normalized = (freqData[dataIndex] || 0) / 255;
+          // Logarithmic power curve for heavy weighted feel
+          targetHeight = Math.pow(normalized, 1.25) * maxHeadroom + 10;
         } else {
-          if (!audio.paused && Math.random() > 0.2) {
-            syntheticHeights[i] = Math.floor(Math.random() * maxBarHeight) + 15;
+          if (!audio.paused && Math.random() > 0.35) {
+            targetHeight = (Math.random() * maxHeadroom * 0.75) + 12;
           } else if (audio.paused) {
-            syntheticHeights[i] = 10;
+            targetHeight = 8;
           }
-          barHeight = syntheticHeights[i];
         }
 
-        // Floating Peak Hold Caps
-        if (barHeight > peaks[i]) {
-          peaks[i] = barHeight;
+        // Heavy inertia interpolation
+        currentHeights[i] += (targetHeight - currentHeights[i]) * 0.35;
+
+        // Peak Hold Caps with gravity drop
+        if (currentHeights[i] > peaks[i]) {
+          peaks[i] = currentHeights[i];
         } else {
-          peaks[i] -= 3.0; // Gravity drop
+          peaks[i] -= 2.2;
           if (peaks[i] < 0) peaks[i] = 0;
         }
 
         var x = spacing + i * (barWidth + spacing);
-        var y = canvas.height - barHeight - 8;
+        var y = canvas.height - currentHeights[i] - 8;
 
-        // Alternate Hot Neon Red (#ff0044) & Vivid Purple (#9d00ff)
+        // Hot Neon Red & Vivid Purple Bars
         ctx.fillStyle = (i % 2 === 0) ? '#ff0044' : '#9d00ff';
-        ctx.fillRect(x, y, barWidth, barHeight);
+        ctx.fillRect(x, y, barWidth, currentHeights[i]);
 
-        // White Peak Cap
+        // White Floating Cap
         ctx.fillStyle = '#ffffff';
         var peakY = canvas.height - peaks[i] - 13;
-        if (peakY < 6) peakY = 6;
         ctx.fillRect(x, peakY, barWidth, 4);
       }
 
-      // Update Progress Timeline
+      // Update Progress
       if (audio.duration && !isNaN(audio.duration)) {
         var pct = (audio.currentTime / audio.duration) * 100;
         progressFill.style.width = pct + "%";
