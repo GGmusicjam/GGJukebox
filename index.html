@@ -7,7 +7,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background-color: #06070a;
+      background-color: #050608;
       color: #ffffff;
       font-family: Arial, Helvetica, sans-serif;
       display: flex;
@@ -16,105 +16,105 @@
       justify-content: center;
       height: 100vh;
       width: 100vw;
-      padding: 16px;
+      padding: 14px;
       overflow: hidden;
       user-select: none;
       cursor: pointer;
     }
 
-    /* Main Deck Frame with Reactive Glow */
+    /* Main Deck Frame with Red/Purple Reactive Glow */
     .deck-frame {
       width: 100%;
       height: 100%;
-      border: 4px solid #00f0ff;
-      border-radius: 24px;
-      background-color: #0d1017;
+      border: 4px solid #ff0044;
+      border-radius: 20px;
+      background-color: #0b0c12;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      padding: 20px 24px;
+      padding: 16px 20px;
       position: relative;
-      box-shadow: 0 0 25px rgba(0, 240, 255, 0.25);
+      box-shadow: 0 0 25px rgba(255, 0, 68, 0.3);
       transition: box-shadow 0.08s ease, border-color 0.08s ease;
     }
 
-    /* Top Badge & Live Indicator */
+    /* Top Bar */
     .top-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       width: 100%;
-      padding: 0 10px;
+      padding: 0 6px;
     }
 
     .badge-pill {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      padding: 6px 18px;
-      background-color: #ff0077;
+      gap: 8px;
+      padding: 5px 16px;
+      background-color: #ff0044;
       border-radius: 20px;
-      box-shadow: 0 0 15px rgba(255, 0, 119, 0.5);
+      box-shadow: 0 0 15px rgba(255, 0, 68, 0.6);
     }
 
     .pulse-dot {
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       background-color: #ffffff;
       border-radius: 50%;
     }
 
     .station-text {
       color: #ffffff;
-      font-size: 1.1rem;
+      font-size: 1rem;
       letter-spacing: 2px;
       font-weight: bold;
     }
 
     .sync-counter {
       font-size: 1rem;
-      color: #00f0ff;
+      color: #b537f2;
       font-weight: bold;
       letter-spacing: 1px;
     }
 
     /* Song Title */
     #title {
-      font-size: 2.3rem;
+      font-size: 2.2rem;
       font-weight: 900;
       color: #ffffff;
       text-align: center;
-      line-height: 1.15;
+      line-height: 1.1;
       text-transform: uppercase;
       word-break: break-word;
       max-width: 95%;
-      margin: 6px 0;
-      text-shadow: 0 0 18px rgba(0, 240, 255, 0.6);
+      margin: 4px 0;
+      text-shadow: 0 0 15px rgba(181, 55, 242, 0.7);
     }
 
-    /* Canvas Stage for Visualizer & Ring */
+    /* Extra Tall Visualizer Stage (3x Vertical Room) */
     #visualStage {
       width: 100%;
-      height: 140px;
+      height: 250px;
       background-color: #050608;
-      border: 2px solid #1c2233;
-      border-radius: 14px;
+      border: 2px solid #23192d;
+      border-radius: 12px;
       display: block;
     }
 
-    /* Timeline Progress Bar */
+    /* Timeline Progress */
     .progress-wrap {
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
     }
 
     .progress-bar-bg {
       width: 100%;
-      height: 8px;
-      background-color: #1a1e2b;
+      height: 7px;
+      background-color: #181422;
       border-radius: 4px;
       overflow: hidden;
     }
@@ -122,7 +122,7 @@
     .progress-bar-fill {
       height: 100%;
       width: 0%;
-      background: linear-gradient(to right, #00f0ff, #ff0077);
+      background: linear-gradient(to right, #ff0044, #9d00ff);
       border-radius: 4px;
       transition: width 0.3s linear;
     }
@@ -131,60 +131,60 @@
       display: flex;
       justify-content: space-between;
       width: 100%;
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: bold;
-      color: #798ba3;
+      color: #79718a;
     }
 
-    /* Interaction Overlay (For Friends if Autoplay is Muted) */
+    /* Visitor Modal */
     #clickOverlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(6, 7, 10, 0.94);
+      background-color: rgba(5, 6, 8, 0.94);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      border-radius: 20px;
+      border-radius: 18px;
       z-index: 100;
     }
 
     .click-btn {
-      background-color: #ff0077;
+      background: linear-gradient(135deg, #ff0044, #9d00ff);
       color: #ffffff;
-      font-size: 2rem;
-      padding: 20px 42px;
-      border-radius: 20px;
-      border: 4px solid #ffffff;
+      font-size: 1.9rem;
+      padding: 18px 38px;
+      border-radius: 18px;
+      border: 3px solid #ffffff;
       text-transform: uppercase;
       font-weight: 900;
       letter-spacing: 2px;
-      box-shadow: 0 0 40px rgba(255, 0, 119, 0.8);
+      box-shadow: 0 0 35px rgba(255, 0, 68, 0.8);
       animation: pulseBtn 1.5s infinite ease-in-out;
     }
 
     @keyframes pulseBtn {
       0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.06); }
+      50% { transform: scale(1.05); }
     }
   </style>
 </head>
 <body onclick="handleUserUnlock()">
 
   <div class="deck-frame" id="frameBox">
-    <!-- Click to Tune In Modal (For Visitors) -->
+    <!-- Modal for Muted Guests -->
     <div id="clickOverlay" style="display: none;">
       <div class="click-btn">🔊 CLICK TO TUNE IN</div>
     </div>
 
-    <!-- Top Status Header -->
+    <!-- Header -->
     <div class="top-bar">
       <div class="badge-pill">
         <div class="pulse-dot"></div>
-        <span class="station-text">LIVE BROADCAST</span>
+        <span class="station-text">LIVE STREAM</span>
       </div>
       <div class="sync-counter" id="timeDisplay">0:00 / 0:00</div>
     </div>
@@ -192,8 +192,8 @@
     <!-- Song Title -->
     <div id="title">JUKEBOX STANDBY</div>
 
-    <!-- Reactive Audio Canvas -->
-    <canvas id="visualStage" width="800" height="180"></canvas>
+    <!-- High-Clearance Canvas Visualizer -->
+    <canvas id="visualStage" width="800" height="340"></canvas>
 
     <!-- Progress Timeline -->
     <div class="progress-wrap">
@@ -202,7 +202,7 @@
       </div>
       <div class="bottom-info">
         <span id="status">SYNCHRONIZED DECK ACTIVE</span>
-        <span>SL AUDIO ENGINE</span>
+        <span>GG AUDIO ENGINE</span>
       </div>
     </div>
   </div>
@@ -230,7 +230,7 @@
     var peaks = new Array(NUM_BARS).fill(0);
     var syntheticHeights = new Array(NUM_BARS).fill(15);
 
-    // Web Audio API Context & Analyser
+    // Audio Context Setup
     var audioCtx = null;
     var analyser = null;
     var source = null;
@@ -245,7 +245,7 @@
           audioCtx = new AudioContextClass();
           analyser = audioCtx.createAnalyser();
           analyser.fftSize = 64;
-          analyser.smoothingTimeConstant = 0.8;
+          analyser.smoothingTimeConstant = 0.75;
           freqData = new Uint8Array(analyser.frequencyBinCount);
 
           audio.crossOrigin = "anonymous";
@@ -255,7 +255,6 @@
           isAudioContextReady = true;
         }
       } catch (e) {
-        // Fallback gracefully if CORS prevents MediaElementSource
         isAudioContextReady = false;
       }
     }
@@ -274,7 +273,6 @@
       var hasRealData = false;
       var bassLevel = 0;
 
-      // Extract real-time frequency data if available
       if (isAudioContextReady && analyser && !audio.paused) {
         analyser.getByteFrequencyData(freqData);
         var sum = 0;
@@ -283,68 +281,88 @@
           hasRealData = true;
           bassLevel = (freqData[0] + freqData[1] + freqData[2]) / 3;
         }
+      } else if (!audio.paused) {
+        // Fallback bass simulation
+        bassLevel = Math.floor(Math.random() * 120) + 40;
       }
 
-      // Dynamic Frame Border Glow based on Bass hits
-      var glowIntensity = Math.floor((bassLevel / 255) * 45) + 15;
-      frameBox.style.boxShadow = "0 0 " + glowIntensity + "px rgba(0, 240, 255, 0.4)";
+      // Dynamic Frame Border Glow based on Bass
+      var glowIntensity = Math.floor((bassLevel / 255) * 50) + 15;
+      frameBox.style.boxShadow = "0 0 " + glowIntensity + "px rgba(255, 0, 68, 0.5)";
 
-      // Draw Center Pulse Ring
-      var centerX = canvas.width / 2;
-      var centerY = canvas.height / 2;
-      var ringRadius = 25 + (bassLevel / 255) * 20;
+      // ==========================================
+      // DRAW DEDICATED PULSING "GG" EMBLEM (Top-Right)
+      // ==========================================
+      var ggScale = 1.0 + (bassLevel / 255) * 0.28;
+      var ggX = canvas.width - 65;
+      var ggY = 48;
 
-      ctx.strokeStyle = (bassLevel > 140) ? '#ff0077' : '#00f0ff';
+      ctx.save();
+      ctx.translate(ggX, ggY);
+      ctx.scale(ggScale, ggScale);
+
+      // Outer glowing ring
+      ctx.strokeStyle = (bassLevel > 130) ? '#ff0044' : '#9d00ff';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
+      ctx.arc(0, 0, 24, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Render 22 Equalizer Bars with Peak Hold
+      // Inner GG text
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 20px "Arial Black", Impact, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText("GG", 0, 1);
+      ctx.restore();
+
+      // ==========================================
+      // RENDER TALL EQUALIZER BARS (Red & Purple)
+      // ==========================================
       var spacing = 8;
       var totalSpacing = spacing * (NUM_BARS + 1);
       var barWidth = (canvas.width - totalSpacing) / NUM_BARS;
+      var maxBarHeight = canvas.height - 40; // Full 3x vertical sweep range
 
       for (var i = 0; i < NUM_BARS; i++) {
-        var barHeight = 10;
+        var barHeight = 12;
 
         if (hasRealData) {
           var dataIndex = Math.floor((i / NUM_BARS) * freqData.length);
           var val = freqData[dataIndex] || 0;
-          barHeight = (val / 255) * (canvas.height - 35) + 8;
+          barHeight = (val / 255) * maxBarHeight + 10;
         } else {
-          // Synthetic beat bounce if audio is silent or CORS isolated
-          if (!audio.paused && Math.random() > 0.3) {
-            syntheticHeights[i] = Math.floor(Math.random() * (canvas.height - 40)) + 12;
+          if (!audio.paused && Math.random() > 0.2) {
+            syntheticHeights[i] = Math.floor(Math.random() * maxBarHeight) + 15;
           } else if (audio.paused) {
-            syntheticHeights[i] = 8;
+            syntheticHeights[i] = 10;
           }
           barHeight = syntheticHeights[i];
         }
 
-        // Peak Hold logic
+        // Floating Peak Hold Caps
         if (barHeight > peaks[i]) {
           peaks[i] = barHeight;
         } else {
-          peaks[i] -= 2.2; // Smooth peak gravity fall
+          peaks[i] -= 3.0; // Gravity drop
           if (peaks[i] < 0) peaks[i] = 0;
         }
 
         var x = spacing + i * (barWidth + spacing);
         var y = canvas.height - barHeight - 8;
 
-        // Equalizer Bar (Cyan/Magenta Alternating)
-        ctx.fillStyle = (i % 2 === 0) ? '#00f0ff' : '#ff0077';
+        // Alternate Hot Neon Red (#ff0044) & Vivid Purple (#9d00ff)
+        ctx.fillStyle = (i % 2 === 0) ? '#ff0044' : '#9d00ff';
         ctx.fillRect(x, y, barWidth, barHeight);
 
-        // Floating Peak Cap
+        // White Peak Cap
         ctx.fillStyle = '#ffffff';
-        var peakY = canvas.height - peaks[i] - 12;
-        if (peakY < 5) peakY = 5;
+        var peakY = canvas.height - peaks[i] - 13;
+        if (peakY < 6) peakY = 6;
         ctx.fillRect(x, peakY, barWidth, 4);
       }
 
-      // Update Timeline & Counter
+      // Update Progress Timeline
       if (audio.duration && !isNaN(audio.duration)) {
         var pct = (audio.currentTime / audio.duration) * 100;
         progressFill.style.width = pct + "%";
