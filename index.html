@@ -7,27 +7,28 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background-color: #08090d;
+      background-color: #06070a;
       color: #ffffff;
-      font-family: 'Arial Black', Impact, sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
       height: 100vh;
       width: 100vw;
-      padding: 24px;
+      padding: 20px;
       overflow: hidden;
       user-select: none;
       cursor: pointer;
     }
 
+    /* Main High-Contrast Border Box */
     .deck-frame {
       width: 100%;
       height: 100%;
       border: 6px solid #00f0ff;
-      border-radius: 24px;
-      background-color: #12151f;
+      border-radius: 20px;
+      background-color: #10131d;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -36,13 +37,14 @@
       position: relative;
     }
 
+    /* ON AIR BADGE */
     .top-bar {
       display: flex;
       align-items: center;
       gap: 12px;
       padding: 8px 24px;
       background-color: #ff0077;
-      border-radius: 30px;
+      border-radius: 25px;
     }
 
     .pulse-dot {
@@ -56,49 +58,52 @@
       color: #ffffff;
       font-size: 1.3rem;
       letter-spacing: 2px;
-      font-weight: 900;
+      font-weight: bold;
     }
 
+    /* SONG TITLE */
     #title {
-      font-size: 2.8rem;
+      font-size: 2.6rem;
+      font-weight: 900;
       color: #ffffff;
       text-align: center;
-      line-height: 1.15;
+      line-height: 1.2;
       text-transform: uppercase;
       word-break: break-word;
       max-width: 95%;
       margin: 10px 0;
     }
 
-    /* HTML5 2D Canvas Equalizer */
+    /* SOLID CANVAS VISUALIZER */
     #eqCanvas {
       width: 100%;
-      height: 110px;
-      background-color: #0a0b10;
+      height: 120px;
+      background-color: #050608;
+      border: 3px solid #00f0ff;
       border-radius: 12px;
-      border: 2px solid #252c3d;
+      display: block;
     }
 
+    /* BOTTOM STATUS */
     #status {
-      font-family: Arial, sans-serif;
       font-size: 1.3rem;
       font-weight: bold;
       color: #00f0ff;
       letter-spacing: 1px;
     }
 
-    /* Unmute Banner if Viewer Blocks Autoplay */
+    /* INTERACTION OVERLAY (For Guests If Muted) */
     #clickOverlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(8, 9, 13, 0.92);
+      background-color: rgba(6, 7, 10, 0.92);
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 18px;
+      border-radius: 14px;
       z-index: 10;
     }
 
@@ -107,7 +112,7 @@
       color: #ffffff;
       font-size: 2rem;
       padding: 20px 40px;
-      border-radius: 20px;
+      border-radius: 18px;
       border: 4px solid #ffffff;
       text-transform: uppercase;
       font-weight: 900;
@@ -118,7 +123,7 @@
 <body onclick="unmuteAudio()">
 
   <div class="deck-frame">
-    <!-- Centered Unlock Overlay (Appears for friends if their viewer mutes sound) -->
+    <!-- Overlay if Autoplay is blocked -->
     <div id="clickOverlay" style="display: none;">
       <div class="click-btn">🔊 CLICK TO TUNE IN</div>
     </div>
@@ -132,59 +137,64 @@
     <!-- Song Title -->
     <div id="title">JUKEBOX STREAM</div>
 
-    <!-- Canvas Equalizer (100% Reliable Rendering) -->
-    <canvas id="eqCanvas" width="800" height="150"></canvas>
+    <!-- 100% Reliable 2D Canvas -->
+    <canvas id="eqCanvas" width="800" height="160"></canvas>
 
-    <!-- Status Text -->
+    <!-- Bottom Status Text -->
     <div id="status">BROADCASTING SYNCHRONIZED AUDIO</div>
   </div>
 
   <audio id="player" preload="auto"></audio>
 
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const audioUrl = params.get('url');
-    const songName = params.get('name') || "Now Playing";
-    const startTime = parseFloat(params.get('t') || "0");
+    var params = new URLSearchParams(window.location.search);
+    var audioUrl = params.get('url');
+    var songName = params.get('name') || "Now Playing";
+    var startTime = parseFloat(params.get('t') || "0");
 
-    const audio = document.getElementById('player');
-    const titleEl = document.getElementById('title');
-    const statusEl = document.getElementById('status');
-    const overlayEl = document.getElementById('clickOverlay');
-    const canvas = document.getElementById('eqCanvas');
-    const ctx = canvas.getContext('2d');
+    var audio = document.getElementById('player');
+    var titleEl = document.getElementById('title');
+    var statusEl = document.getElementById('status');
+    var overlayEl = document.getElementById('clickOverlay');
+    var canvas = document.getElementById('eqCanvas');
+    var ctx = canvas.getContext('2d');
 
-    // 16 Solid Equalizer Bars drawn directly on Canvas
-    const NUM_BARS = 16;
-    let heights = new Array(NUM_BARS).fill(20);
+    // 16 Solid Equalizer Bars
+    var NUM_BARS = 16;
+    var heights = [25, 40, 60, 30, 80, 50, 90, 45, 70, 35, 85, 40, 65, 50, 75, 30];
 
     function drawBars() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const totalSpacing = canvas.width * 0.02;
-      const barWidth = (canvas.width - (totalSpacing * (NUM_BARS + 1))) / NUM_BARS;
+      // 1. Clear background to dark
+      ctx.fillStyle = '#050608';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      for (let i = 0; i < NUM_BARS; i++) {
-        // Target randomized height
-        if (Math.random() > 0.3) {
-          heights[i] = Math.floor(Math.random() * (canvas.height - 30)) + 15;
+      var spacing = 10;
+      var totalSpacing = spacing * (NUM_BARS + 1);
+      var barWidth = (canvas.width - totalSpacing) / NUM_BARS;
+
+      for (var i = 0; i < NUM_BARS; i++) {
+        // Randomize heights
+        if (Math.random() > 0.25) {
+          heights[i] = Math.floor(Math.random() * (canvas.height - 35)) + 15;
         }
 
-        const x = totalSpacing + i * (barWidth + totalSpacing);
-        const y = canvas.height - heights[i] - 10;
+        var x = spacing + i * (barWidth + spacing);
+        var y = canvas.height - heights[i] - 10;
 
-        // Alternate Cyan and Magenta bars
+        // Alternate Cyan (#00f0ff) and Magenta (#ff0077)
         ctx.fillStyle = (i % 2 === 0) ? '#00f0ff' : '#ff0077';
-        ctx.beginPath();
-        ctx.roundRect(x, y, barWidth, heights[i], 6);
-        ctx.fill();
+        
+        // Rock-solid fillRect that works in all CEF versions
+        ctx.fillRect(x, y, barWidth, heights[i]);
       }
     }
 
+    // Run visualizer at 10 FPS
     setInterval(drawBars, 100);
 
     function unmuteAudio() {
       if (audioUrl) {
-        audio.play().then(() => {
+        audio.play().then(function() {
           overlayEl.style.display = "none";
           statusEl.textContent = "BROADCASTING SYNCHRONIZED AUDIO";
         });
@@ -195,15 +205,14 @@
       titleEl.textContent = decodeURIComponent(songName);
       audio.src = audioUrl;
 
-      audio.addEventListener('loadedmetadata', () => {
+      audio.addEventListener('loadedmetadata', function() {
         if (startTime > 0 && !isNaN(startTime)) {
           audio.currentTime = startTime;
         }
-        audio.play().then(() => {
+        audio.play().then(function() {
           overlayEl.style.display = "none";
           statusEl.textContent = "BROADCASTING SYNCHRONIZED AUDIO";
-        }).catch(() => {
-          // Autoplay blocked by visitor's viewer -> show large click button
+        }).catch(function() {
           overlayEl.style.display = "flex";
           statusEl.textContent = "CLICK SCREEN TO UNMUTE";
         });
