@@ -7,7 +7,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: radial-gradient(circle at 50% 50%, #161824 0%, #08090d 100%);
+      background-color: #08090d;
       color: #ffffff;
       font-family: 'Arial Black', Impact, sans-serif;
       display: flex;
@@ -16,143 +16,109 @@
       justify-content: space-between;
       height: 100vh;
       width: 100vw;
-      padding: 30px;
+      padding: 24px;
       overflow: hidden;
       user-select: none;
       cursor: pointer;
     }
 
-    /* Outer Neon Border Frame */
     .deck-frame {
       width: 100%;
       height: 100%;
-      border: 4px solid #00f0ff;
-      border-radius: 28px;
-      box-shadow: inset 0 0 30px rgba(0, 240, 255, 0.2), 0 0 40px rgba(0, 240, 255, 0.3);
+      border: 6px solid #00f0ff;
+      border-radius: 24px;
+      background-color: #12151f;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      padding: 30px 40px;
-      background: rgba(15, 17, 26, 0.92);
+      padding: 25px 30px;
       position: relative;
     }
 
-    /* Top Bar: Station Badge */
     .top-bar {
       display: flex;
       align-items: center;
-      gap: 15px;
+      gap: 12px;
       padding: 8px 24px;
-      background: rgba(255, 0, 128, 0.15);
-      border: 2px solid #ff0080;
+      background-color: #ff0077;
       border-radius: 30px;
-      box-shadow: 0 0 15px rgba(255, 0, 128, 0.4);
     }
 
     .pulse-dot {
-      width: 16px;
-      height: 16px;
-      background: #ff0080;
+      width: 14px;
+      height: 14px;
+      background-color: #ffffff;
       border-radius: 50%;
-      box-shadow: 0 0 15px #ff0080;
-      animation: pulse 1s infinite alternate;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(0.8); opacity: 0.7; }
-      100% { transform: scale(1.3); opacity: 1; }
     }
 
     .station-text {
-      color: #ff0080;
-      font-size: 1.4rem;
-      letter-spacing: 3px;
-      text-transform: uppercase;
+      color: #ffffff;
+      font-size: 1.3rem;
+      letter-spacing: 2px;
+      font-weight: 900;
     }
 
-    /* Center: Song Title (Huge & Bold) */
     #title {
-      font-size: 3.2rem;
+      font-size: 2.8rem;
       color: #ffffff;
       text-align: center;
       line-height: 1.15;
       text-transform: uppercase;
-      text-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
       word-break: break-word;
       max-width: 95%;
       margin: 10px 0;
     }
 
-    /* Equalizer Sound Bars (Thick & Glowing) */
-    .eq-container {
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      gap: 14px;
-      height: 110px;
+    /* HTML5 2D Canvas Equalizer */
+    #eqCanvas {
       width: 100%;
-      margin-bottom: 10px;
+      height: 110px;
+      background-color: #0a0b10;
+      border-radius: 12px;
+      border: 2px solid #252c3d;
     }
 
-    .bar {
-      width: 22px;
-      height: 25px;
-      background: linear-gradient(to top, #ff0080 0%, #00f0ff 100%);
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
-      transition: height 0.1s ease;
-    }
-
-    /* Bottom Subtext */
     #status {
       font-family: Arial, sans-serif;
-      font-size: 1.25rem;
+      font-size: 1.3rem;
       font-weight: bold;
       color: #00f0ff;
       letter-spacing: 1px;
-      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
     }
 
-    /* Centered Interaction Modal if Audio is Blocked */
+    /* Unmute Banner if Viewer Blocks Autoplay */
     #clickOverlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(8, 9, 13, 0.85);
+      background-color: rgba(8, 9, 13, 0.92);
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      border-radius: 24px;
+      border-radius: 18px;
       z-index: 10;
     }
 
     .click-btn {
-      background: linear-gradient(135deg, #ff0080, #7928ca);
+      background-color: #ff0077;
       color: #ffffff;
-      font-size: 1.8rem;
-      padding: 18px 36px;
-      border-radius: 18px;
-      border: 2px solid #ffffff;
-      box-shadow: 0 0 35px rgba(255, 0, 128, 0.8);
+      font-size: 2rem;
+      padding: 20px 40px;
+      border-radius: 20px;
+      border: 4px solid #ffffff;
       text-transform: uppercase;
+      font-weight: 900;
       letter-spacing: 2px;
-      animation: floatBtn 1.5s infinite ease-in-out;
-    }
-
-    @keyframes floatBtn {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
     }
   </style>
 </head>
 <body onclick="unmuteAudio()">
 
   <div class="deck-frame">
-    <!-- Click Overlay (Appears if browser mutes autoplay) -->
+    <!-- Centered Unlock Overlay (Appears for friends if their viewer mutes sound) -->
     <div id="clickOverlay" style="display: none;">
       <div class="click-btn">🔊 CLICK TO TUNE IN</div>
     </div>
@@ -160,28 +126,17 @@
     <!-- Top Badge -->
     <div class="top-bar">
       <div class="pulse-dot"></div>
-      <span class="station-text">LIVE STREAM</span>
+      <span class="station-text">LIVE ON AIR</span>
     </div>
 
-    <!-- Song Name -->
-    <div id="title">JUKEBOX READY</div>
+    <!-- Song Title -->
+    <div id="title">JUKEBOX STREAM</div>
 
-    <!-- Big Sound Bars -->
-    <div class="eq-container">
-      <div class="bar" id="b1"></div>
-      <div class="bar" id="b2"></div>
-      <div class="bar" id="b3"></div>
-      <div class="bar" id="b4"></div>
-      <div class="bar" id="b5"></div>
-      <div class="bar" id="b6"></div>
-      <div class="bar" id="b7"></div>
-      <div class="bar" id="b8"></div>
-      <div class="bar" id="b9"></div>
-      <div class="bar" id="b10"></div>
-    </div>
+    <!-- Canvas Equalizer (100% Reliable Rendering) -->
+    <canvas id="eqCanvas" width="800" height="150"></canvas>
 
-    <!-- Bottom Status -->
-    <div id="status">SYNCHRONIZED AUDIO BROADCAST</div>
+    <!-- Status Text -->
+    <div id="status">BROADCASTING SYNCHRONIZED AUDIO</div>
   </div>
 
   <audio id="player" preload="auto"></audio>
@@ -196,27 +151,42 @@
     const titleEl = document.getElementById('title');
     const statusEl = document.getElementById('status');
     const overlayEl = document.getElementById('clickOverlay');
-    const bars = [
-      document.getElementById('b1'), document.getElementById('b2'),
-      document.getElementById('b3'), document.getElementById('b4'),
-      document.getElementById('b5'), document.getElementById('b6'),
-      document.getElementById('b7'), document.getElementById('b8'),
-      document.getElementById('b9'), document.getElementById('b10')
-    ];
+    const canvas = document.getElementById('eqCanvas');
+    const ctx = canvas.getContext('2d');
 
-    // Constantly active visualizer bounce loop
-    setInterval(() => {
-      bars.forEach(bar => {
-        const h = Math.floor(Math.random() * 95) + 15;
-        bar.style.height = h + 'px';
-      });
-    }, 100);
+    // 16 Solid Equalizer Bars drawn directly on Canvas
+    const NUM_BARS = 16;
+    let heights = new Array(NUM_BARS).fill(20);
+
+    function drawBars() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const totalSpacing = canvas.width * 0.02;
+      const barWidth = (canvas.width - (totalSpacing * (NUM_BARS + 1))) / NUM_BARS;
+
+      for (let i = 0; i < NUM_BARS; i++) {
+        // Target randomized height
+        if (Math.random() > 0.3) {
+          heights[i] = Math.floor(Math.random() * (canvas.height - 30)) + 15;
+        }
+
+        const x = totalSpacing + i * (barWidth + totalSpacing);
+        const y = canvas.height - heights[i] - 10;
+
+        // Alternate Cyan and Magenta bars
+        ctx.fillStyle = (i % 2 === 0) ? '#00f0ff' : '#ff0077';
+        ctx.beginPath();
+        ctx.roundRect(x, y, barWidth, heights[i], 6);
+        ctx.fill();
+      }
+    }
+
+    setInterval(drawBars, 100);
 
     function unmuteAudio() {
       if (audioUrl) {
         audio.play().then(() => {
           overlayEl.style.display = "none";
-          statusEl.textContent = "SYNCHRONIZED BROADCAST ACTIVE";
+          statusEl.textContent = "BROADCASTING SYNCHRONIZED AUDIO";
         });
       }
     }
@@ -231,9 +201,9 @@
         }
         audio.play().then(() => {
           overlayEl.style.display = "none";
-          statusEl.textContent = "SYNCHRONIZED BROADCAST ACTIVE";
+          statusEl.textContent = "BROADCASTING SYNCHRONIZED AUDIO";
         }).catch(() => {
-          // Autoplay blocked by viewer CEF -> show click overlay
+          // Autoplay blocked by visitor's viewer -> show large click button
           overlayEl.style.display = "flex";
           statusEl.textContent = "CLICK SCREEN TO UNMUTE";
         });
