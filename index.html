@@ -35,7 +35,7 @@
       padding: 16px 22px;
       position: relative;
       box-shadow: 0 0 25px rgba(255, 0, 68, 0.35);
-      transition: box-shadow 0.15s ease, border-color 0.15s ease;
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
     }
 
     .top-bar {
@@ -278,8 +278,8 @@
         audioCtx = new AudioContextClass();
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 64; // 32 frequency bins
-        // 0.82 smooths rapid flutter while keeping clear transients
-        analyser.smoothingTimeConstant = 0.82;
+        // 0.89 smoothing: filters out micro-jitter while preserving big rhythm pulses
+        analyser.smoothingTimeConstant = 0.89;
 
         sourceNode = audioCtx.createMediaElementSource(audio);
         sourceNode.connect(analyser);
@@ -315,23 +315,30 @@
         if (bassLevel > 0) hasRealAudio = true;
       }
 
-      // Smooth mathematical pump for the GG Badge
+      // Bass gate and smooth breathing scale for GG Emblem
       var normBass = bassLevel / 255;
-      var targetKick = Math.pow(normBass, 2.0);
-      smoothedKick += (targetKick - smoothedKick) * 0.22; // Smooth badge expansion without micro-stutter
+      if (normBass < 0.15) {
+        normBass = 0;
+      } else {
+        normBass = (normBass - 0.15) / 0.85;
+      }
 
-      var pulseScale = 1.0 + (smoothedKick * 0.32);
+      var targetKick = Math.pow(normBass, 2.0);
+      // Gentle, heavy swell on kicks without twitch
+      smoothedKick += (targetKick - smoothedKick) * 0.14;
+
+      var pulseScale = 1.0 + (smoothedKick * 0.30);
       ggBadge.style.transform = "scale(" + pulseScale.toFixed(3) + ")";
 
       if (bassLevel > 185) {
         ggBadge.style.borderColor = '#00f0ff';
-        ggBadge.style.boxShadow = "0 0 30px #00f0ff, 0 0 50px #ff0044";
+        ggBadge.style.boxShadow = "0 0 28px #00f0ff, 0 0 45px #ff0044";
       } else {
-        ggBadge.style.borderColor = (bassLevel > 105) ? '#ff0044' : '#9d00ff';
-        ggBadge.style.boxShadow = "0 0 " + Math.floor(smoothedKick * 26 + 8) + "px rgba(255, 0, 68, 0.7)";
+        ggBadge.style.borderColor = (bassLevel > 110) ? '#ff0044' : '#9d00ff';
+        ggBadge.style.boxShadow = "0 0 " + Math.floor(smoothedKick * 24 + 8) + "px rgba(255, 0, 68, 0.7)";
       }
 
-      var frameGlow = Math.floor(smoothedKick * 30) + 10;
+      var frameGlow = Math.floor(smoothedKick * 26) + 10;
       frameBox.style.boxShadow = "0 0 " + frameGlow + "px rgba(255, 0, 68, 0.35)";
 
       // Bars Calculation
@@ -347,30 +354,37 @@
           if (hasRealAudio) {
             var rawBin = freqData[i] || 0;
             var normVal = rawBin / 255;
-            
-            // Power curve gives deep valleys and tall peaks without flatlining
-            var expandedVal = Math.pow(normVal, 1.6);
+
+            // Noise gate: cuts off low-level noise floor to prevent micro-twitching
+            if (normVal < 0.14) {
+              normVal = 0;
+            } else {
+              normVal = (normVal - 0.14) / 0.86;
+            }
+
+            // Power curve: makes drops punch and gives clean headroom in valleys
+            var expandedVal = Math.pow(normVal, 1.75);
             targetHeight = 6 + (expandedVal * maxBarHeight);
           } else {
-            targetHeight = 6 + Math.abs(Math.sin((Date.now() * 0.003) + (i * 0.3))) * 40;
+            // Idle ambient wave
+            targetHeight = 6 + Math.abs(Math.sin((Date.now() * 0.002) + (i * 0.25))) * 32;
           }
         }
 
-        // Controlled rise lerp (0.30): climbs smoothly across frames without sudden jumps
+        // Heavy smooth rise: climbs without snapping or spasming
         if (targetHeight > currentHeights[i]) {
-          currentHeights[i] += (targetHeight - currentHeights[i]) * 0.30;
+          currentHeights[i] += (targetHeight - currentHeights[i]) * 0.18;
         } else {
-          // Controlled gravity fall: smooth deceleration prevents rapid flickering
-          var decay = (currentHeights[i] * 0.065) + 3.0;
-          currentHeights[i] -= decay;
+          // Linear glide drop: gives that weighty, buttery bounce
+          currentHeights[i] -= 2.4;
           if (currentHeights[i] < 6) currentHeights[i] = 6;
         }
 
-        // Floating peak caps glide down smoothly
+        // Smooth peak caps that float downward gracefully
         if (currentHeights[i] >= peaks[i]) {
           peaks[i] = currentHeights[i];
         } else {
-          peaks[i] -= 1.6;
+          peaks[i] -= 1.1;
           if (peaks[i] < 6) peaks[i] = 6;
         }
 
