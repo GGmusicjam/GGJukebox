@@ -35,7 +35,7 @@
       padding: 16px 22px;
       position: relative;
       box-shadow: 0 0 25px rgba(255, 0, 68, 0.35);
-      transition: box-shadow 0.1s ease, border-color 0.1s ease;
+      transition: box-shadow 0.08s ease, border-color 0.08s ease;
     }
 
     .top-bar {
@@ -112,6 +112,7 @@
       box-shadow: 0 0 20px rgba(255, 0, 68, 0.7), inset 0 0 15px rgba(157, 0, 255, 0.6);
       position: relative;
       transform-origin: center center;
+      transition: transform 0.05s ease-out;
     }
 
     .gg-emblem-wrap::before {
@@ -247,7 +248,6 @@
     var startTime = parseFloat(params.get('t') || "0");
 
     var audio = document.getElementById('player');
-    // Enable cross-origin for Web Audio API frequency analysis
     audio.crossOrigin = "anonymous";
 
     var titleEl = document.getElementById('title');
@@ -277,8 +277,9 @@
         var AudioContextClass = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AudioContextClass();
         analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64; // Produces 32 frequency bins
-        analyser.smoothingTimeConstant = 0.78; // Musical decay rate
+        analyser.fftSize = 64; // 32 frequency bins
+        // 0.65 smoothing gives punchy kick transients without losing fluidity
+        analyser.smoothingTimeConstant = 0.65; 
 
         sourceNode = audioCtx.createMediaElementSource(audio);
         sourceNode.connect(analyser);
@@ -310,25 +311,27 @@
 
       if (analyser && !audio.paused) {
         analyser.getByteFrequencyData(freqData);
-        // Real sub-bass is concentrated in bins 0, 1, and 2
         bassLevel = Math.max(freqData[0], freqData[1], freqData[2]);
         if (bassLevel > 0) hasRealAudio = true;
       }
 
-      // GG Emblem & Frame Reaction to Real Bass
-      var normalizedBass = bassLevel / 255;
-      var pulseScale = 1.0 + (normalizedBass * 0.28);
+      // Dynamic kick-punch calculation for the GG Badge
+      var normBass = bassLevel / 255;
+      // Exponential kick punch emphasizes transient hits over background synth bass
+      var kickPunch = Math.pow(normBass, 2.2); 
+      var pulseScale = 1.0 + (kickPunch * 0.35);
+
       ggBadge.style.transform = "scale(" + pulseScale.toFixed(3) + ")";
 
-      if (bassLevel > 180) {
+      if (bassLevel > 195) {
         ggBadge.style.borderColor = '#00f0ff';
-        ggBadge.style.boxShadow = "0 0 30px #00f0ff, 0 0 50px #ff0044";
+        ggBadge.style.boxShadow = "0 0 32px #00f0ff, 0 0 55px #ff0044";
       } else {
-        ggBadge.style.borderColor = (bassLevel > 100) ? '#ff0044' : '#9d00ff';
-        ggBadge.style.boxShadow = "0 0 " + Math.floor(normalizedBass * 25 + 10) + "px rgba(255, 0, 68, 0.7)";
+        ggBadge.style.borderColor = (bassLevel > 110) ? '#ff0044' : '#9d00ff';
+        ggBadge.style.boxShadow = "0 0 " + Math.floor(kickPunch * 28 + 8) + "px rgba(255, 0, 68, 0.7)";
       }
 
-      var frameGlow = Math.floor(normalizedBass * 32) + 10;
+      var frameGlow = Math.floor(kickPunch * 35) + 10;
       frameBox.style.boxShadow = "0 0 " + frameGlow + "px rgba(255, 0, 68, 0.35)";
 
       // Bars Calculation
@@ -342,28 +345,33 @@
 
         if (!audio.paused) {
           if (hasRealAudio) {
-            // Read actual audio frequency bin for this specific bar
-            var binVal = freqData[i] || 0;
-            targetHeight = 6 + (binVal / 255) * maxBarHeight;
+            var rawBin = freqData[i] || 0;
+            var normVal = rawBin / 255;
+            
+            // Dynamic contrast expansion: powers values up so drops punch and bounce cleanly
+            var expandedVal = Math.pow(normVal, 1.85);
+            targetHeight = 6 + (expandedVal * maxBarHeight);
           } else {
-            // Passive idle wave if cross-origin policy restricts Web Audio access
+            // Idle fallback wave
             targetHeight = 6 + Math.abs(Math.sin((Date.now() * 0.003) + (i * 0.3))) * 40;
           }
         }
 
-        // Smooth physical rise and gravity fall
+        // Snappy rise on transients
         if (targetHeight > currentHeights[i]) {
-          currentHeights[i] += (targetHeight - currentHeights[i]) * 0.45;
+          currentHeights[i] += (targetHeight - currentHeights[i]) * 0.62;
         } else {
-          currentHeights[i] -= 4.5;
+          // Proportional spring-gravity decay: drops rapidly from peak heights so 128-140 BPM kicks bounce
+          var decay = (currentHeights[i] * 0.14) + 3.2;
+          currentHeights[i] -= decay;
           if (currentHeights[i] < 6) currentHeights[i] = 6;
         }
 
-        // Floating peak caps
+        // Peak floating line physics
         if (currentHeights[i] >= peaks[i]) {
           peaks[i] = currentHeights[i];
         } else {
-          peaks[i] -= 2.0;
+          peaks[i] -= 2.6;
           if (peaks[i] < 6) peaks[i] = 6;
         }
 
