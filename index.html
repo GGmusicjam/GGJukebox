@@ -35,7 +35,7 @@
       padding: 16px 22px;
       position: relative;
       box-shadow: 0 0 25px rgba(255, 0, 68, 0.35);
-      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+      transition: box-shadow 0.15s ease, border-color 0.15s ease;
     }
 
     .top-bar {
@@ -277,9 +277,8 @@
         var AudioContextClass = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AudioContextClass();
         analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64; // 32 frequency bins
-        // 0.89 smoothing: filters out micro-jitter while preserving big rhythm pulses
-        analyser.smoothingTimeConstant = 0.89;
+        analyser.fftSize = 256; // 128 high-resolution frequency bins
+        analyser.smoothingTimeConstant = 0.80;
 
         sourceNode = audioCtx.createMediaElementSource(audio);
         sourceNode.connect(analyser);
@@ -307,38 +306,39 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       var hasRealAudio = false;
-      var bassLevel = 0;
+      var kickDrumVal = 0;
 
       if (analyser && !audio.paused) {
         analyser.getByteFrequencyData(freqData);
-        bassLevel = Math.max(freqData[0], freqData[1], freqData[2]);
-        if (bassLevel > 0) hasRealAudio = true;
+
+        // Transient Kick punch detection from bins 0 & 1
+        kickDrumVal = Math.max(freqData[0], freqData[1]);
+        if (kickDrumVal > 0 || freqData[3] > 0) hasRealAudio = true;
       }
 
-      // Bass gate and smooth breathing scale for GG Emblem
-      var normBass = bassLevel / 255;
-      if (normBass < 0.15) {
-        normBass = 0;
+      // GG Badge Pulse - Dynamic kick punch with headroom
+      var normKick = kickDrumVal / 255;
+      if (normKick < 0.22) {
+        normKick = 0;
       } else {
-        normBass = (normBass - 0.15) / 0.85;
+        normKick = (normKick - 0.22) / 0.78;
       }
 
-      var targetKick = Math.pow(normBass, 2.0);
-      // Gentle, heavy swell on kicks without twitch
-      smoothedKick += (targetKick - smoothedKick) * 0.14;
+      var targetKickPunch = Math.pow(normKick, 2.2);
+      smoothedKick += (targetKickPunch - smoothedKick) * 0.16;
 
       var pulseScale = 1.0 + (smoothedKick * 0.30);
       ggBadge.style.transform = "scale(" + pulseScale.toFixed(3) + ")";
 
-      if (bassLevel > 185) {
+      if (kickDrumVal > 200) {
         ggBadge.style.borderColor = '#00f0ff';
         ggBadge.style.boxShadow = "0 0 28px #00f0ff, 0 0 45px #ff0044";
       } else {
-        ggBadge.style.borderColor = (bassLevel > 110) ? '#ff0044' : '#9d00ff';
+        ggBadge.style.borderColor = (kickDrumVal > 120) ? '#ff0044' : '#9d00ff';
         ggBadge.style.boxShadow = "0 0 " + Math.floor(smoothedKick * 24 + 8) + "px rgba(255, 0, 68, 0.7)";
       }
 
-      var frameGlow = Math.floor(smoothedKick * 26) + 10;
+      var frameGlow = Math.floor(smoothedKick * 28) + 10;
       frameBox.style.boxShadow = "0 0 " + frameGlow + "px rgba(255, 0, 68, 0.35)";
 
       // Bars Calculation
@@ -349,42 +349,89 @@
 
       for (var i = 0; i < NUM_BARS; i++) {
         var targetHeight = 6;
+        var riseRate = 0.22;
+        var fallRate = 2.6;
 
         if (!audio.paused) {
           if (hasRealAudio) {
-            var rawBin = freqData[i] || 0;
-            var normVal = rawBin / 255;
+            var rawVal = 0;
 
-            // Noise gate: cuts off low-level noise floor to prevent micro-twitching
-            if (normVal < 0.14) {
-              normVal = 0;
-            } else {
-              normVal = (normVal - 0.14) / 0.86;
+            // ZONE 1A: SUB & KICK DRUM (Bars 0 to 3) - DESENSITIZED FOR HEADROOM
+            if (i <= 3) {
+              var subBin = i; // Map uniquely across bins 0, 1, 2, 3
+              rawVal = freqData[subBin] || 0;
+
+              var nKick = rawVal / 255;
+              // Higher gate threshold: ignores continuous drone, requires real beat hit
+              if (nKick < 0.26) {
+                nKick = 0;
+              } else {
+                nKick = (nKick - 0.26) / 0.74;
+              }
+
+              // Power curve 2.4 + 0.84 headroom cap keeps bars below ceiling
+              targetHeight = 6 + Math.pow(nKick, 2.4) * (maxBarHeight * 0.84);
+
+              // Attack and fast spring gravity so bars drop between kicks
+              riseRate = 0.30;
+              fallRate = (currentHeights[i] * 0.11) + 3.6;
+            }
+            // ZONE 1B: UPPER BASS & PERCUSSION (Bars 4 to 6)
+            else if (i <= 6) {
+              var bassBin = 3 + (i - 3); // Bins 4, 5, 6
+              rawVal = freqData[bassBin] || 0;
+
+              var nBass = rawVal / 255;
+              nBass = (nBass < 0.18) ? 0 : (nBass - 0.18) / 0.82;
+              targetHeight = 6 + Math.pow(nBass, 1.8) * maxBarHeight;
+
+              riseRate = 0.32;
+              fallRate = (currentHeights[i] * 0.08) + 3.0;
+            }
+            // ZONE 2: SNARE & CLAP TRANSIENTS (Bars 7 to 13)
+            else if (i <= 13) {
+              var snareBin = 7 + (i - 7) * 2; // Bins 7, 9, 11, 13, 15, 17, 19
+              rawVal = freqData[snareBin] || 0;
+
+              var nSnare = rawVal / 255;
+              nSnare = (nSnare < 0.14) ? 0 : (nSnare - 0.14) / 0.86;
+              targetHeight = 6 + Math.pow(nSnare, 2.0) * maxBarHeight;
+
+              riseRate = 0.32;
+              fallRate = (currentHeights[i] * 0.07) + 2.8;
+            }
+            // ZONE 3: HI-HATS & SYNTH AIR (Bars 14 to 21)
+            else {
+              var hatBin = 21 + Math.floor((i - 14) * 4.5); // Bins 21 to 52
+              rawVal = freqData[hatBin] || 0;
+
+              var nHat = rawVal / 255;
+              nHat = (nHat < 0.10) ? 0 : (nHat - 0.10) / 0.90;
+              targetHeight = 6 + Math.pow(nHat, 1.5) * maxBarHeight;
+
+              riseRate = 0.18;
+              fallRate = 2.0;
             }
 
-            // Power curve: makes drops punch and gives clean headroom in valleys
-            var expandedVal = Math.pow(normVal, 1.75);
-            targetHeight = 6 + (expandedVal * maxBarHeight);
           } else {
             // Idle ambient wave
             targetHeight = 6 + Math.abs(Math.sin((Date.now() * 0.002) + (i * 0.25))) * 32;
           }
         }
 
-        // Heavy smooth rise: climbs without snapping or spasming
+        // Apply physical rise lerp
         if (targetHeight > currentHeights[i]) {
-          currentHeights[i] += (targetHeight - currentHeights[i]) * 0.18;
+          currentHeights[i] += (targetHeight - currentHeights[i]) * riseRate;
         } else {
-          // Linear glide drop: gives that weighty, buttery bounce
-          currentHeights[i] -= 2.4;
+          currentHeights[i] -= fallRate;
           if (currentHeights[i] < 6) currentHeights[i] = 6;
         }
 
-        // Smooth peak caps that float downward gracefully
+        // Floating peak caps
         if (currentHeights[i] >= peaks[i]) {
           peaks[i] = currentHeights[i];
         } else {
-          peaks[i] -= 1.1;
+          peaks[i] -= 1.3;
           if (peaks[i] < 6) peaks[i] = 6;
         }
 
