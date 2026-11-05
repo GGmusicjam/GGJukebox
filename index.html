@@ -35,7 +35,7 @@
       padding: 16px 22px;
       position: relative;
       box-shadow: 0 0 25px rgba(255, 0, 68, 0.35);
-      transition: box-shadow 0.05s ease, border-color 0.05s ease;
+      transition: box-shadow 0.15s ease, border-color 0.15s ease;
     }
 
     .top-bar {
@@ -112,6 +112,7 @@
       box-shadow: 0 0 20px rgba(255, 0, 68, 0.7), inset 0 0 15px rgba(157, 0, 255, 0.6);
       position: relative;
       transform-origin: center center;
+      transition: transform 0.08s ease-out;
     }
 
     .gg-emblem-wrap::before {
@@ -260,7 +261,15 @@
     var NUM_BARS = 22;
     var peaks = new Array(NUM_BARS).fill(0);
     var currentHeights = new Array(NUM_BARS).fill(6);
+    var smoothedBass = 0;
     var seekDone = false;
+
+    // Real visualizer curve weighting (higher bass on left, rolling mids and tops)
+    var barWeights = [
+      0.95, 0.92, 0.88, 0.82, 0.78, 0.72, 0.68, 0.62,
+      0.58, 0.54, 0.50, 0.48, 0.46, 0.44, 0.42, 0.40,
+      0.38, 0.35, 0.32, 0.30, 0.28, 0.25
+    ];
 
     function formatTime(sec) {
       if (isNaN(sec) || sec < 0) return "0:00";
@@ -273,67 +282,88 @@
       return m + ":" + (s < 10 ? "0" : "") + s;
     }
 
-    function render() {
+    function render(timestamp) {
       ctx.fillStyle = '#040508';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      var bassLevel = 0;
-      if (!audio.paused) {
-        // High-energy dynamic rhythm generator for 100% reliable audio-safe playback
-        bassLevel = Math.random() > 0.4 ? Math.floor(Math.random() * 190) + 60 : 30;
-      }
+      var isPlaying = !audio.paused && audio.currentTime > 0;
+      var t = timestamp * 0.001; // seconds
 
-      var normalizedBass = bassLevel / 255;
-      var pulseScale = 1.0 + Math.pow(normalizedBass, 2.0) * 0.45;
+      // 126 BPM rhythmic beat envelope
+      var beat = Math.sin(t * 13.2); 
+      var subBeat = Math.cos(t * 6.6);
+      var rawKick = Math.max(0, beat * 0.7 + subBeat * 0.3);
 
-      ggBadge.style.transform = "scale(" + pulseScale + ")";
-      if (bassLevel > 160) {
+      var targetBass = isPlaying ? (rawKick * 170 + 40) : 0;
+      // Exponential smoothing for natural bass pulsing
+      smoothedBass += (targetBass - smoothedBass) * 0.18;
+
+      var normalizedBass = smoothedBass / 255;
+      var pulseScale = 1.0 + normalizedBass * 0.15; // Controlled badge scale
+
+      ggBadge.style.transform = "scale(" + pulseScale.toFixed(3) + ")";
+
+      if (smoothedBass > 140) {
         ggBadge.style.borderColor = '#00f0ff';
-        ggBadge.style.boxShadow = "0 0 30px #00f0ff, 0 0 50px #ff0044";
+        ggBadge.style.boxShadow = "0 0 25px rgba(0, 240, 255, 0.6), 0 0 40px rgba(255, 0, 68, 0.5)";
       } else {
-        ggBadge.style.borderColor = (bassLevel > 80) ? '#ff0044' : '#9d00ff';
-        ggBadge.style.boxShadow = "0 0 " + Math.floor(normalizedBass * 25 + 10) + "px rgba(255, 0, 68, 0.7)";
+        ggBadge.style.borderColor = (smoothedBass > 85) ? '#ff0044' : '#9d00ff';
+        ggBadge.style.boxShadow = "0 0 " + Math.floor(normalizedBass * 20 + 8) + "px rgba(255, 0, 68, 0.6)";
       }
 
-      var frameGlow = Math.floor(normalizedBass * 35) + 12;
-      frameBox.style.boxShadow = "0 0 " + frameGlow + "px rgba(255, 0, 68, 0.4)";
+      var frameGlow = Math.floor(normalizedBass * 22) + 10;
+      frameBox.style.boxShadow = "0 0 " + frameGlow + "px rgba(255, 0, 68, 0.35)";
 
       var spacing = 8;
       var totalSpacing = spacing * (NUM_BARS + 1);
       var barWidth = (canvas.width - totalSpacing) / NUM_BARS;
-      var maxBarHeight = canvas.height - 35;
+      var maxBarHeight = canvas.height - 45;
 
       for (var i = 0; i < NUM_BARS; i++) {
         var targetHeight = 6;
-        if (!audio.paused) {
-          targetHeight = (Math.random() > 0.35) ? (Math.random() * maxBarHeight * 0.85) + 8 : 6;
+
+        if (isPlaying) {
+          // Coordinated sine harmonic across the bar index + gentle organic flutter
+          var harmonic = Math.sin(t * 8.5 + (i * 0.45));
+          var subHarmonic = Math.cos(t * 4.2 - (i * 0.25));
+          var barEnergy = Math.max(0, (harmonic * 0.6 + subHarmonic * 0.4 + rawKick * 0.5));
+          var flutter = (Math.random() * 0.15);
+
+          // Scaled with frequency roll-off curve
+          var profileWeight = barWeights[i] || 0.4;
+          targetHeight = 6 + (barEnergy + flutter) * maxBarHeight * profileWeight * 0.85;
+          if (targetHeight > maxBarHeight) targetHeight = maxBarHeight;
         }
 
+        // Smooth rise (lerp), controlled gravity decay
         if (targetHeight > currentHeights[i]) {
-          currentHeights[i] = targetHeight;
+          currentHeights[i] += (targetHeight - currentHeights[i]) * 0.32;
         } else {
-          currentHeights[i] -= 15.0;
+          currentHeights[i] -= 5.5;
           if (currentHeights[i] < 6) currentHeights[i] = 6;
         }
 
+        // Floating peak caps with realistic gravity
         if (currentHeights[i] >= peaks[i]) {
           peaks[i] = currentHeights[i];
         } else {
-          peaks[i] -= 4.0;
+          peaks[i] -= 2.2;
           if (peaks[i] < 6) peaks[i] = 6;
         }
 
         var x = spacing + i * (barWidth + spacing);
         var y = canvas.height - currentHeights[i] - 8;
 
+        // Alternate neon red and electric purple
         ctx.fillStyle = (i % 2 === 0) ? '#ff0044' : '#9d00ff';
         ctx.fillRect(x, y, barWidth, currentHeights[i]);
 
+        // Peak line
         if (peaks[i] > 10) {
           ctx.fillStyle = '#ffffff';
-          var peakY = canvas.height - peaks[i] - 13;
+          var peakY = canvas.height - peaks[i] - 12;
           if (peakY < 6) peakY = 6;
-          ctx.fillRect(x, peakY, barWidth, 4);
+          ctx.fillRect(x, peakY, barWidth, 3);
         }
       }
 
@@ -371,14 +401,12 @@
         .replace("?dl=0", "")
         .replace("&dl=0", "");
 
-      // Ensure proper direct raw parameter
       if (streamUrl.indexOf("dl.dropboxusercontent.com") !== -1 && streamUrl.indexOf("?") === -1) {
         streamUrl += "?raw=1";
       }
 
       audio.src = streamUrl;
 
-      // Handle direct seeking for large files
       audio.addEventListener('loadedmetadata', function() {
         if (!seekDone && startTime > 0 && !isNaN(startTime)) {
           audio.currentTime = startTime;
