@@ -70,6 +70,19 @@
       font-weight: bold;
     }
 
+    .top-right-meta {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .vol-badge {
+      font-size: 0.95rem;
+      color: #00f0ff;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
     .sync-counter {
       font-size: 1.05rem;
       color: #b537f2;
@@ -215,7 +228,10 @@
         <div class="pulse-dot"></div>
         <span class="station-text">LIVE STREAM</span>
       </div>
-      <div class="sync-counter" id="timeDisplay">0:00 / 0:00</div>
+      <div class="top-right-meta">
+        <span class="vol-badge" id="volDisplay">VOL 100%</span>
+        <div class="sync-counter" id="timeDisplay">0:00 / 0:00</div>
+      </div>
     </div>
 
     <div class="mid-header-row">
@@ -245,6 +261,8 @@
     var audioUrl = params.get('url');
     var songName = params.get('name') || "Now Playing";
     var startTime = parseFloat(params.get('t') || "0");
+    var volParam = parseFloat(params.get('vol'));
+    var targetVol = isNaN(volParam) ? 1.0 : Math.max(0, Math.min(1, volParam / 100));
 
     var audio = document.getElementById('player');
     audio.crossOrigin = "anonymous";
@@ -252,12 +270,17 @@
     var titleEl = document.getElementById('title');
     var statusEl = document.getElementById('status');
     var timeDisplay = document.getElementById('timeDisplay');
+    var volDisplay = document.getElementById('volDisplay');
     var progressFill = document.getElementById('progressFill');
     var overlayEl = document.getElementById('clickOverlay');
     var frameBox = document.getElementById('frameBox');
     var ggBadge = document.getElementById('ggBadge');
     var canvas = document.getElementById('visualStage');
     var ctx = canvas.getContext('2d');
+
+    if (volDisplay) {
+      volDisplay.textContent = "VOL " + Math.round(targetVol * 100) + "%";
+    }
 
     var NUM_BARS = 22;
     var peaks = new Array(NUM_BARS).fill(0);
@@ -268,6 +291,7 @@
     // Web Audio API Nodes
     var audioCtx = null;
     var analyser = null;
+    var gainNode = null;
     var sourceNode = null;
     var freqData = null;
 
@@ -280,13 +304,19 @@
         analyser.fftSize = 256; // 128 high-resolution frequency bins
         analyser.smoothingTimeConstant = 0.80;
 
+        // GainNode sits AFTER analyser so visualizer bars stay full-height at low volume
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = targetVol;
+
         sourceNode = audioCtx.createMediaElementSource(audio);
         sourceNode.connect(analyser);
-        analyser.connect(audioCtx.destination);
+        analyser.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
 
         freqData = new Uint8Array(analyser.frequencyBinCount);
       } catch (err) {
         console.warn("Web Audio API CORS notice:", err);
+        audio.volume = targetVol;
       }
     }
 
@@ -362,17 +392,13 @@
               rawVal = freqData[subBin] || 0;
 
               var nKick = rawVal / 255;
-              // Higher gate threshold: ignores continuous drone, requires real beat hit
               if (nKick < 0.26) {
                 nKick = 0;
               } else {
                 nKick = (nKick - 0.26) / 0.74;
               }
 
-              // Power curve 2.4 + 0.84 headroom cap keeps bars below ceiling
               targetHeight = 6 + Math.pow(nKick, 2.4) * (maxBarHeight * 0.84);
-
-              // Attack and fast spring gravity so bars drop between kicks
               riseRate = 0.30;
               fallRate = (currentHeights[i] * 0.11) + 3.6;
             }
@@ -462,6 +488,12 @@
 
     function startPlayback() {
       initAudioContext();
+      if (gainNode) {
+        gainNode.gain.value = targetVol;
+      } else {
+        audio.volume = targetVol;
+      }
+
       if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
