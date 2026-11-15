@@ -44,6 +44,7 @@
       justify-content: space-between;
       width: 100%;
       padding: 0 4px;
+      gap: 10px;
     }
 
     .badge-pill {
@@ -54,6 +55,7 @@
       background-color: #ff0044;
       border-radius: 20px;
       box-shadow: 0 0 15px rgba(255, 0, 68, 0.6);
+      white-space: nowrap;
     }
 
     .pulse-dot {
@@ -73,14 +75,77 @@
     .top-right-meta {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
+    }
+
+    .vol-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background-color: #14111f;
+      border: 1px solid #35274d;
+      padding: 4px 12px;
+      border-radius: 16px;
+    }
+
+    #muteBtn {
+      background: none;
+      border: none;
+      color: #00f0ff;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+      transition: transform 0.1s ease, color 0.15s ease;
+    }
+
+    #muteBtn:hover {
+      transform: scale(1.15);
+    }
+
+    #muteBtn.muted {
+      color: #ff0044;
+    }
+
+    #volSlider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 90px;
+      height: 6px;
+      background: #261d38;
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    #volSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #00f0ff;
+      box-shadow: 0 0 8px #00f0ff;
+      cursor: pointer;
+    }
+
+    #volSlider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border: none;
+      border-radius: 50%;
+      background: #00f0ff;
+      box-shadow: 0 0 8px #00f0ff;
+      cursor: pointer;
     }
 
     .vol-badge {
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       color: #00f0ff;
       font-weight: bold;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
+      min-width: 40px;
+      text-align: right;
     }
 
     .sync-counter {
@@ -88,6 +153,7 @@
       color: #b537f2;
       font-weight: bold;
       letter-spacing: 1px;
+      white-space: nowrap;
     }
 
     .mid-header-row {
@@ -228,8 +294,13 @@
         <div class="pulse-dot"></div>
         <span class="station-text">LIVE STREAM</span>
       </div>
+
       <div class="top-right-meta">
-        <span class="vol-badge" id="volDisplay">VOL 100%</span>
+        <div class="vol-controls" id="volControlsBox" onclick="event.stopPropagation()">
+          <button id="muteBtn" type="button" title="Mute / Unmute" onclick="toggleMute(event)">🔊</button>
+          <input id="volSlider" type="range" min="0" max="100" value="100" oninput="onSliderInput(this.value)" onclick="event.stopPropagation()">
+          <span class="vol-badge" id="volDisplay">100%</span>
+        </div>
         <div class="sync-counter" id="timeDisplay">0:00 / 0:00</div>
       </div>
     </div>
@@ -262,7 +333,25 @@
     var songName = params.get('name') || "Now Playing";
     var startTime = parseFloat(params.get('t') || "0");
     var volParam = parseFloat(params.get('vol'));
-    var targetVol = isNaN(volParam) ? 1.0 : Math.max(0, Math.min(1, volParam / 100));
+    var forceSilentDisplay = params.get('mute') === '1';
+
+    var savedPersonalVol = null;
+    var savedMuted = false;
+    try {
+      savedPersonalVol = localStorage.getItem('ggjukebox_personal_vol');
+      savedMuted = localStorage.getItem('ggjukebox_personal_muted') === '1';
+    } catch (e) {}
+
+    var initialPct = 100;
+    if (savedPersonalVol !== null && !isNaN(parseFloat(savedPersonalVol))) {
+      initialPct = parseFloat(savedPersonalVol);
+    } else if (!isNaN(volParam)) {
+      initialPct = Math.max(0, Math.min(100, volParam));
+    }
+
+    var targetVol = initialPct / 100;
+    var isMuted = forceSilentDisplay ? true : savedMuted;
+    var preMuteVol = targetVol > 0 ? targetVol : 0.75;
 
     var audio = document.getElementById('player');
     audio.crossOrigin = "anonymous";
@@ -271,6 +360,9 @@
     var statusEl = document.getElementById('status');
     var timeDisplay = document.getElementById('timeDisplay');
     var volDisplay = document.getElementById('volDisplay');
+    var volSlider = document.getElementById('volSlider');
+    var muteBtn = document.getElementById('muteBtn');
+    var volControlsBox = document.getElementById('volControlsBox');
     var progressFill = document.getElementById('progressFill');
     var overlayEl = document.getElementById('clickOverlay');
     var frameBox = document.getElementById('frameBox');
@@ -278,8 +370,8 @@
     var canvas = document.getElementById('visualStage');
     var ctx = canvas.getContext('2d');
 
-    if (volDisplay) {
-      volDisplay.textContent = "VOL " + Math.round(targetVol * 100) + "%";
+    if (forceSilentDisplay && volControlsBox) {
+      volControlsBox.style.display = 'none';
     }
 
     var NUM_BARS = 22;
@@ -288,12 +380,74 @@
     var smoothedKick = 0;
     var seekDone = false;
 
-    // Web Audio API Nodes
     var audioCtx = null;
     var analyser = null;
     var gainNode = null;
     var sourceNode = null;
     var freqData = null;
+
+    function applyVolume() {
+      var effectiveVol = (forceSilentDisplay || isMuted) ? 0 : targetVol;
+      var displayPct = Math.round(effectiveVol * 100);
+
+      if (gainNode) {
+        gainNode.gain.value = effectiveVol;
+      } else {
+        audio.volume = effectiveVol;
+      }
+
+      if (volSlider) volSlider.value = displayPct;
+      if (volDisplay) volDisplay.textContent = displayPct + "%";
+
+      if (muteBtn) {
+        if (isMuted || displayPct === 0) {
+          muteBtn.textContent = "🔇";
+          muteBtn.classList.add("muted");
+        } else if (displayPct < 50) {
+          muteBtn.textContent = "🔉";
+          muteBtn.classList.remove("muted");
+        } else {
+          muteBtn.textContent = "🔊";
+          muteBtn.classList.remove("muted");
+        }
+      }
+    }
+
+    function onSliderInput(val) {
+      if (forceSilentDisplay) return;
+      var pct = Math.max(0, Math.min(100, parseFloat(val)));
+      targetVol = pct / 100;
+      isMuted = (pct === 0);
+      if (targetVol > 0) preMuteVol = targetVol;
+
+      try {
+        localStorage.setItem('ggjukebox_personal_vol', String(pct));
+        localStorage.setItem('ggjukebox_personal_muted', isMuted ? '1' : '0');
+      } catch (e) {}
+
+      applyVolume();
+    }
+
+    function toggleMute(e) {
+      if (e) e.stopPropagation();
+      if (forceSilentDisplay) return;
+      if (isMuted) {
+        isMuted = false;
+        if (targetVol <= 0) targetVol = preMuteVol;
+      } else {
+        if (targetVol > 0) preMuteVol = targetVol;
+        isMuted = true;
+      }
+
+      try {
+        localStorage.setItem('ggjukebox_personal_vol', String(Math.round(targetVol * 100)));
+        localStorage.setItem('ggjukebox_personal_muted', isMuted ? '1' : '0');
+      } catch (err) {}
+
+      applyVolume();
+    }
+
+    applyVolume();
 
     function initAudioContext() {
       if (audioCtx) return;
@@ -301,12 +455,11 @@
         var AudioContextClass = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AudioContextClass();
         analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256; // 128 high-resolution frequency bins
+        analyser.fftSize = 256;
         analyser.smoothingTimeConstant = 0.80;
 
-        // GainNode sits AFTER analyser so visualizer bars stay full-height at low volume
         gainNode = audioCtx.createGain();
-        gainNode.gain.value = targetVol;
+        gainNode.gain.value = (forceSilentDisplay || isMuted) ? 0 : targetVol;
 
         sourceNode = audioCtx.createMediaElementSource(audio);
         sourceNode.connect(analyser);
@@ -316,7 +469,7 @@
         freqData = new Uint8Array(analyser.frequencyBinCount);
       } catch (err) {
         console.warn("Web Audio API CORS notice:", err);
-        audio.volume = targetVol;
+        audio.volume = (forceSilentDisplay || isMuted) ? 0 : targetVol;
       }
     }
 
@@ -340,13 +493,10 @@
 
       if (analyser && !audio.paused) {
         analyser.getByteFrequencyData(freqData);
-
-        // Transient Kick punch detection from bins 0 & 1
         kickDrumVal = Math.max(freqData[0], freqData[1]);
         if (kickDrumVal > 0 || freqData[3] > 0) hasRealAudio = true;
       }
 
-      // GG Badge Pulse - Dynamic kick punch with headroom
       var normKick = kickDrumVal / 255;
       if (normKick < 0.22) {
         normKick = 0;
@@ -371,7 +521,6 @@
       var frameGlow = Math.floor(smoothedKick * 28) + 10;
       frameBox.style.boxShadow = "0 0 " + frameGlow + "px rgba(255, 0, 68, 0.35)";
 
-      // Bars Calculation
       var spacing = 8;
       var totalSpacing = spacing * (NUM_BARS + 1);
       var barWidth = (canvas.width - totalSpacing) / NUM_BARS;
@@ -386,66 +535,47 @@
           if (hasRealAudio) {
             var rawVal = 0;
 
-            // ZONE 1A: SUB & KICK DRUM (Bars 0 to 3) - DESENSITIZED FOR HEADROOM
             if (i <= 3) {
-              var subBin = i; // Map uniquely across bins 0, 1, 2, 3
-              rawVal = freqData[subBin] || 0;
-
+              rawVal = freqData[i] || 0;
               var nKick = rawVal / 255;
-              if (nKick < 0.26) {
-                nKick = 0;
-              } else {
-                nKick = (nKick - 0.26) / 0.74;
-              }
-
+              nKick = (nKick < 0.26) ? 0 : (nKick - 0.26) / 0.74;
               targetHeight = 6 + Math.pow(nKick, 2.4) * (maxBarHeight * 0.84);
               riseRate = 0.30;
               fallRate = (currentHeights[i] * 0.11) + 3.6;
             }
-            // ZONE 1B: UPPER BASS & PERCUSSION (Bars 4 to 6)
             else if (i <= 6) {
-              var bassBin = 3 + (i - 3); // Bins 4, 5, 6
+              var bassBin = 3 + (i - 3);
               rawVal = freqData[bassBin] || 0;
-
               var nBass = rawVal / 255;
               nBass = (nBass < 0.18) ? 0 : (nBass - 0.18) / 0.82;
               targetHeight = 6 + Math.pow(nBass, 1.8) * maxBarHeight;
-
               riseRate = 0.32;
               fallRate = (currentHeights[i] * 0.08) + 3.0;
             }
-            // ZONE 2: SNARE & CLAP TRANSIENTS (Bars 7 to 13)
             else if (i <= 13) {
-              var snareBin = 7 + (i - 7) * 2; // Bins 7, 9, 11, 13, 15, 17, 19
+              var snareBin = 7 + (i - 7) * 2;
               rawVal = freqData[snareBin] || 0;
-
               var nSnare = rawVal / 255;
               nSnare = (nSnare < 0.14) ? 0 : (nSnare - 0.14) / 0.86;
               targetHeight = 6 + Math.pow(nSnare, 2.0) * maxBarHeight;
-
               riseRate = 0.32;
               fallRate = (currentHeights[i] * 0.07) + 2.8;
             }
-            // ZONE 3: HI-HATS & SYNTH AIR (Bars 14 to 21)
             else {
-              var hatBin = 21 + Math.floor((i - 14) * 4.5); // Bins 21 to 52
+              var hatBin = 21 + Math.floor((i - 14) * 4.5);
               rawVal = freqData[hatBin] || 0;
-
               var nHat = rawVal / 255;
               nHat = (nHat < 0.10) ? 0 : (nHat - 0.10) / 0.90;
               targetHeight = 6 + Math.pow(nHat, 1.5) * maxBarHeight;
-
               riseRate = 0.18;
               fallRate = 2.0;
             }
 
           } else {
-            // Idle ambient wave
             targetHeight = 6 + Math.abs(Math.sin((Date.now() * 0.002) + (i * 0.25))) * 32;
           }
         }
 
-        // Apply physical rise lerp
         if (targetHeight > currentHeights[i]) {
           currentHeights[i] += (targetHeight - currentHeights[i]) * riseRate;
         } else {
@@ -453,7 +583,6 @@
           if (currentHeights[i] < 6) currentHeights[i] = 6;
         }
 
-        // Floating peak caps
         if (currentHeights[i] >= peaks[i]) {
           peaks[i] = currentHeights[i];
         } else {
@@ -488,11 +617,7 @@
 
     function startPlayback() {
       initAudioContext();
-      if (gainNode) {
-        gainNode.gain.value = targetVol;
-      } else {
-        audio.volume = targetVol;
-      }
+      applyVolume();
 
       if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume();
@@ -500,10 +625,12 @@
 
       audio.play().then(function() {
         overlayEl.style.display = "none";
-        statusEl.textContent = "SYNCHRONIZED BROADCAST ACTIVE";
+        statusEl.textContent = forceSilentDisplay ? "VISUAL DISPLAY MODE (HUD AUDIO)" : "SYNCHRONIZED BROADCAST ACTIVE";
       }).catch(function() {
-        overlayEl.style.display = "flex";
-        statusEl.textContent = "CLICK SCREEN TO UNMUTE";
+        if (!forceSilentDisplay) {
+          overlayEl.style.display = "flex";
+          statusEl.textContent = "CLICK SCREEN TO UNMUTE";
+        }
       });
     }
 
