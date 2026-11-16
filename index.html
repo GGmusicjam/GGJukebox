@@ -24,41 +24,43 @@
     .deck-frame {
       width: 100%;
       height: 100%;
-      padding: 18px 22px;
+      padding: 20px 26px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      gap: 12px;
       background: radial-gradient(circle at 50% 25%, #1a1626 0%, #0d0d12 75%);
-      border: 3px solid #ff0055;
-      box-shadow: inset 0 0 28px rgba(255, 0, 85, 0.35);
+      border: 4px solid #ff0055;
+      box-shadow: inset 0 0 32px rgba(255, 0, 85, 0.35);
       position: relative;
     }
 
-    /* Top Bar */
+    /* Top Bar — Larger, Easy-to-Click HUD Controls */
     .top-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 14px;
       z-index: 2;
     }
 
     .live-pill {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       background: linear-gradient(90deg, #ff0055, #c80046);
-      padding: 5px 14px;
+      padding: 9px 18px;
       border-radius: 999px;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 1.4px;
-      box-shadow: 0 0 14px rgba(255, 0, 85, 0.55);
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      box-shadow: 0 0 16px rgba(255, 0, 85, 0.6);
+      flex-shrink: 0;
     }
 
     .live-dot {
-      width: 8px;
-      height: 8px;
+      width: 11px;
+      height: 11px;
       border-radius: 50%;
       background: #ffffff;
       animation: pulseDot 1.4s infinite ease-in-out;
@@ -72,59 +74,60 @@
     .right-controls {
       display: flex;
       align-items: center;
-      gap: 12px;
-      background: rgba(20, 20, 30, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      padding: 5px 14px;
+      gap: 18px;
+      background: rgba(20, 20, 32, 0.92);
+      border: 2px solid rgba(255, 255, 255, 0.16);
+      padding: 8px 18px;
       border-radius: 999px;
     }
 
     .resync-btn {
-      background: rgba(255, 0, 85, 0.2);
-      border: 1px solid #ff0055;
+      background: rgba(255, 0, 85, 0.25);
+      border: 2px solid #ff0055;
       color: #ffffff;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.8px;
-      padding: 4px 10px;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      padding: 8px 18px;
       border-radius: 999px;
       cursor: pointer;
-      box-shadow: 0 0 10px rgba(255, 0, 85, 0.35);
+      box-shadow: 0 0 12px rgba(255, 0, 85, 0.4);
       transition: all 0.15s ease;
     }
 
     .resync-btn:hover {
       background: #ff0055;
-      box-shadow: 0 0 14px rgba(255, 0, 85, 0.75);
+      box-shadow: 0 0 18px rgba(255, 0, 85, 0.85);
     }
 
     .resync-btn.synced {
       border-color: #00f0ff;
-      background: rgba(0, 240, 255, 0.22);
+      background: rgba(0, 240, 255, 0.25);
       color: #00f0ff;
-      box-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.6);
     }
 
     .vol-group {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
     }
 
     .mute-btn {
       background: none;
       border: none;
       color: #ffffff;
-      font-size: 15px;
+      font-size: 24px;
       cursor: pointer;
-      padding: 0 2px;
+      padding: 2px 4px;
+      line-height: 1;
     }
 
     input[type="range"].vol-slider {
       -webkit-appearance: none;
       appearance: none;
-      width: 90px;
-      height: 5px;
+      width: 175px;
+      height: 12px;
       background: #2b2b3d;
       border-radius: 999px;
       outline: none;
@@ -134,85 +137,86 @@
     input[type="range"].vol-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 14px;
-      height: 14px;
+      width: 26px;
+      height: 26px;
       border-radius: 50%;
       background: #00f0ff;
-      box-shadow: 0 0 10px #00f0ff;
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 14px #00f0ff;
       cursor: pointer;
     }
 
     .vol-label {
-      font-size: 12px;
-      font-weight: 700;
+      font-size: 17px;
+      font-weight: 800;
       color: #00f0ff;
-      min-width: 36px;
+      min-width: 48px;
       text-align: right;
     }
 
     .time-readout {
-      font-size: 12px;
-      font-weight: 700;
+      font-size: 16px;
+      font-weight: 800;
       color: #b784ff;
       letter-spacing: 0.6px;
-      min-width: 78px;
+      min-width: 102px;
       text-align: right;
     }
 
-    /* Center Header: Track Title + GG Emblem */
+    /* Center Header: Larger Song Title + GG Emblem */
     .track-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      padding: 4px 6px;
+      gap: 18px;
+      padding: 2px 4px;
     }
 
     .track-title {
-      font-size: 26px;
+      font-size: 38px;
       font-weight: 900;
       letter-spacing: 1.5px;
       text-transform: uppercase;
       color: #ffffff;
-      text-shadow: 0 0 14px rgba(183, 132, 255, 0.55);
+      text-shadow: 0 0 18px rgba(183, 132, 255, 0.65);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 82%;
+      max-width: 84%;
     }
 
     .gg-badge {
-      width: 58px;
-      height: 58px;
+      width: 74px;
+      height: 74px;
       border-radius: 50%;
       border: 3px solid #00f0ff;
       background: radial-gradient(circle, #2a123d 0%, #12101c 80%);
-      box-shadow: 0 0 18px rgba(0, 240, 255, 0.65), inset 0 0 12px rgba(255, 0, 85, 0.6);
+      box-shadow: 0 0 22px rgba(0, 240, 255, 0.7), inset 0 0 14px rgba(255, 0, 85, 0.65);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: 26px;
       font-weight: 900;
       letter-spacing: 1px;
       color: #ffffff;
-      text-shadow: 0 0 8px #ff0055;
+      text-shadow: 0 0 10px #ff0055;
       flex-shrink: 0;
       transition: transform 0.1s ease-out;
     }
 
-    /* Equalizer Visualizer */
+    /* Expanded Equalizer Visualizer Stage (fills free space) */
     .viz-stage {
       width: 100%;
-      height: 44%;
-      min-height: 110px;
-      background: rgba(12, 12, 18, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-      padding: 12px 14px 8px 14px;
+      flex: 1;
+      min-height: 180px;
+      background: rgba(12, 12, 18, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 16px 16px 10px 16px;
       display: flex;
       align-items: flex-end;
       justify-content: space-between;
-      gap: 6px;
+      gap: 7px;
     }
 
     .eq-col {
@@ -227,28 +231,28 @@
 
     .eq-cap {
       width: 100%;
-      height: 3px;
+      height: 4px;
       background: #ffffff;
       border-radius: 2px;
-      margin-bottom: 3px;
-      box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+      margin-bottom: 4px;
+      box-shadow: 0 0 6px rgba(255, 255, 255, 0.85);
     }
 
     .eq-bar {
       width: 100%;
       height: 8%;
-      border-radius: 3px 3px 0 0;
+      border-radius: 4px 4px 0 0;
       transition: height 0.065s ease-out;
     }
 
     .eq-bar.pink {
       background: linear-gradient(180deg, #ff1e6e 0%, #b80044 100%);
-      box-shadow: 0 0 10px rgba(255, 30, 110, 0.45);
+      box-shadow: 0 0 12px rgba(255, 30, 110, 0.5);
     }
 
     .eq-bar.purple {
       background: linear-gradient(180deg, #b829ff 0%, #6800b8 100%);
-      box-shadow: 0 0 10px rgba(184, 41, 255, 0.45);
+      box-shadow: 0 0 12px rgba(184, 41, 255, 0.5);
     }
 
     /* Bottom Progress & Footer */
@@ -260,8 +264,8 @@
 
     .progress-track {
       width: 100%;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.12);
+      height: 8px;
+      background: rgba(255, 255, 255, 0.14);
       border-radius: 999px;
       overflow: hidden;
     }
@@ -270,7 +274,7 @@
       width: 0%;
       height: 100%;
       background: linear-gradient(90deg, #ff0055, #b829ff, #00f0ff);
-      box-shadow: 0 0 10px rgba(184, 41, 255, 0.7);
+      box-shadow: 0 0 12px rgba(184, 41, 255, 0.75);
       transition: width 0.25s linear;
     }
 
@@ -278,16 +282,16 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1.4px;
-      color: rgba(255, 255, 255, 0.55);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: rgba(255, 255, 255, 0.6);
     }
 
     .tap-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(10, 10, 16, 0.86);
+      background: rgba(10, 10, 16, 0.88);
       display: none;
       align-items: center;
       justify-content: center;
@@ -299,12 +303,12 @@
       background: linear-gradient(90deg, #ff0055, #b829ff);
       border: 2px solid #ffffff;
       color: #ffffff;
-      font-size: 16px;
+      font-size: 20px;
       font-weight: 900;
       letter-spacing: 1.5px;
-      padding: 12px 26px;
+      padding: 16px 32px;
       border-radius: 999px;
-      box-shadow: 0 0 24px rgba(255, 0, 85, 0.8);
+      box-shadow: 0 0 28px rgba(255, 0, 85, 0.85);
     }
   </style>
 </head>
@@ -322,8 +326,8 @@
 
         <div class="vol-group">
           <button id="muteBtn" class="mute-btn" title="Mute / Unmute">&#x1F50A;</button>
-          <input id="volSlider" class="vol-slider" type="range" min="0" max="100" value="100" />
-          <span id="volLabel" class="vol-label">100%</span>
+          <input id="volSlider" class="vol-slider" type="range" min="0" max="100" value="25" />
+          <span id="volLabel" class="vol-label">25%</span>
         </div>
 
         <span id="timeReadout" class="time-readout">0:00 / 0:00</span>
@@ -364,7 +368,8 @@
     const trackName   = params.get('name') || 'GG LIVE STREAM';
     const startOffset = parseFloat(params.get('t') || '0');
     const syncStamp   = parseFloat(params.get('sync') || '0');
-    const initVol     = Math.min(100, Math.max(0, parseInt(params.get('vol') || '100', 10)));
+    // Default to 25% if no vol parameter is provided
+    const initVol     = Math.min(100, Math.max(0, parseInt(params.get('vol') || '25', 10)));
     const isWallMuted = params.get('mute') === '1';
 
     const audio        = document.getElementById('audioPlayer');
@@ -382,6 +387,13 @@
     const tapOverlay   = document.getElementById('tapOverlay');
 
     trackTitleEl.textContent = trackName;
+
+    // Gentle perceptual volume curve so 25% is safe on speakers and 100% still scales smoothly
+    function applySafeVolume(pct) {
+      const clamped = Math.min(100, Math.max(0, pct));
+      audio.muted = (clamped === 0);
+      audio.volume = Math.pow(clamped / 100, 1.45) * 0.75;
+    }
 
     // Build 22 alternating pink/purple equalizer bars with white peak caps
     const BAR_COUNT = 22;
@@ -434,7 +446,6 @@
       }
     }
 
-    // Physical wall screen mode (&mute=1): permanently silent at browser & element level
     if (isWallMuted) {
       audio.muted = true;
       audio.volume = 0;
@@ -447,18 +458,15 @@
         }
       });
     } else {
-      audio.muted = false;
-      audio.volume = initVol / 100;
+      applySafeVolume(initVol);
       volSlider.value = initVol;
       volLabel.textContent = initVol + '%';
     }
 
-    // Volume slider & mute toggle (HUD only)
     volSlider.addEventListener('input', () => {
       if (isWallMuted) return;
       const val = parseInt(volSlider.value, 10);
-      audio.muted = (val === 0);
-      audio.volume = val / 100;
+      applySafeVolume(val);
       volLabel.textContent = val + '%';
       muteBtn.innerHTML = val === 0 ? '&#x1F507;' : '&#x1F50A;';
     });
@@ -470,14 +478,13 @@
         volLabel.textContent = '0%';
         muteBtn.innerHTML = '&#x1F507;';
       } else {
-        const val = parseInt(volSlider.value, 10) || 100;
-        audio.volume = val / 100;
+        const val = parseInt(volSlider.value, 10) || 25;
+        applySafeVolume(val);
         volLabel.textContent = val + '%';
         muteBtn.innerHTML = '&#x1F50A;';
       }
     });
 
-    // Resync button next to volume slider
     resyncBtn.addEventListener('click', () => {
       seekToLive();
       audio.play().catch(() => {});
@@ -489,7 +496,6 @@
       }, 1500);
     });
 
-    // Web Audio API Analyzer (HUD live frequency reactive)
     let audioCtx = null;
     let analyser = null;
     let freqData = null;
@@ -527,14 +533,13 @@
         }
       }
 
-     const sec = performance.now() * 0.001;
+      const sec = performance.now() * 0.001;
       let bassEnergy = 0;
 
       for (let i = 0; i < BAR_COUNT; i++) {
         let targetPct = 8;
 
         if (hasLiveSignal) {
-          // Live HUD Audio FFT: untouched!
           const binIndex = Math.min(freqData.length - 1, i + 4);
           let norm = freqData[binIndex] / 255;
           if (i < 3) norm *= 0.78;
@@ -570,7 +575,6 @@
       ggBadge.style.transform = 'scale(' + scale.toFixed(3) + ')';
     }
 
-    // Track progress & timer readout
     audio.addEventListener('timeupdate', () => {
       const cur = audio.currentTime || 0;
       const dur = audio.duration || 0;
@@ -580,7 +584,6 @@
       }
     });
 
-    // Load & start stream
     if (streamUrl) {
       audio.src = streamUrl;
       audio.addEventListener('loadedmetadata', () => {
