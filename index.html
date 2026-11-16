@@ -61,7 +61,7 @@
       height: 8px;
       border-radius: 50%;
       background: #ffffff;
-      animation: pulseDot 1.2s infinite ease-in-out;
+      animation: pulseDot 1.4s infinite ease-in-out;
     }
 
     @keyframes pulseDot {
@@ -197,7 +197,7 @@
       color: #ffffff;
       text-shadow: 0 0 8px #ff0055;
       flex-shrink: 0;
-      transition: transform 0.08s ease-out;
+      transition: transform 0.1s ease-out;
     }
 
     /* Equalizer Visualizer */
@@ -232,14 +232,13 @@
       border-radius: 2px;
       margin-bottom: 3px;
       box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
-      transition: transform 0.06s linear;
     }
 
     .eq-bar {
       width: 100%;
       height: 8%;
       border-radius: 3px 3px 0 0;
-      transition: height 0.055s ease-out;
+      transition: height 0.065s ease-out;
     }
 
     .eq-bar.pink {
@@ -435,12 +434,19 @@
       }
     }
 
-    // Physical wall screen mode (&mute=1): silent visual display only
+    // Physical wall screen mode (&mute=1): permanently silent at browser & element level
     if (isWallMuted) {
       audio.muted = true;
       audio.volume = 0;
       hudControls.style.display = 'none';
       modeStatus.textContent = 'VISUAL DISPLAY MODE (HUD AUDIO)';
+      // Guard against any browser autoplay unmute attempts on the wall board
+      audio.addEventListener('volumechange', () => {
+        if (!audio.muted || audio.volume !== 0) {
+          audio.muted = true;
+          audio.volume = 0;
+        }
+      });
     } else {
       audio.muted = false;
       audio.volume = initVol / 100;
@@ -448,7 +454,7 @@
       volLabel.textContent = initVol + '%';
     }
 
-    // Volume slider & mute toggle
+    // Volume slider & mute toggle (HUD only)
     volSlider.addEventListener('input', () => {
       if (isWallMuted) return;
       const val = parseInt(volSlider.value, 10);
@@ -484,14 +490,14 @@
       }, 1500);
     });
 
-    // Web Audio API Analyzer (with graceful synthetic fallback for CORS streams)
+    // Web Audio API Analyzer (HUD live frequency reactive)
     let audioCtx = null;
     let analyser = null;
     let freqData = null;
     let analyserReady = false;
 
     function initAudioAnalyser() {
-      if (analyserReady) return;
+      if (analyserReady || isWallMuted) return;
       try {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AudioContextClass();
@@ -512,7 +518,7 @@
       requestAnimationFrame(renderVisualizer);
 
       let hasLiveSignal = false;
-      if (analyserReady && analyser && !audio.paused) {
+      if (!isWallMuted && analyserReady && analyser && !audio.paused) {
         analyser.getByteFrequencyData(freqData);
         for (let k = 0; k < 24; k++) {
           if (freqData[k] > 5) {
@@ -522,42 +528,60 @@
         }
       }
 
-      const now = performance.now() * 0.005;
+      const sec = performance.now() * 0.001;
       let bassEnergy = 0;
+
+      // Musical 126 BPM beat clock for the permanently muted wall board (2.1 beats/sec)
+      const beatPhase = (sec * 2.1) % 1.0;
+      const barPhase  = (sec * 0.525) % 4.0; // 4-beat bar (0..4)
+      const kickPulse = Math.pow(Math.max(0, 1 - beatPhase * 2.4), 2.2); // Punchy quarter-note kick
+      const isSnareBeat = (Math.floor(barPhase) === 1 || Math.floor(barPhase) === 3);
+      const snarePulse = isSnareBeat ? Math.pow(Math.max(0, 1 - beatPhase * 3.0), 2.0) : 0;
 
       for (let i = 0; i < BAR_COUNT; i++) {
         let targetPct = 8;
 
         if (hasLiveSignal) {
-          // Skip sub-bass rumble bins 0-3 and map bars across punchy EDM mids/highs
+          // Live HUD Audio FFT: skip sub-bass rumble bins 0-3 and map punchy EDM mids/highs
           const binIndex = Math.min(freqData.length - 1, i + 4);
           let norm = freqData[binIndex] / 255;
-          // Desensitize low bars slightly & apply 0.48 noise gate for sharp drum-beat jumps
           if (i < 3) norm *= 0.78;
           if (norm < 0.48) {
             targetPct = 8 + norm * 18;
           } else {
             targetPct = Math.min(98, 22 + Math.pow((norm - 0.48) / 0.52, 0.85) * 76);
           }
-        } else if (!audio.paused || isWallMuted) {
-          // Smooth beat-reactive fallback when stream CORS headers block raw FFT data
-          const wave = Math.sin(now * 2.4 + i * 0.55) * 0.5 + 0.5;
-          const beat = Math.pow(Math.sin(now * 4.2) * 0.5 + 0.5, 3);
-          const taper = 1 - (i / BAR_COUNT) * 0.35;
-          targetPct = Math.min(92, 14 + (wave * 42 + beat * 38) * taper);
+        } else if (isWallMuted) {
+          // Wall Display (&mute=1): Realistic, non-rapid 126 BPM EDM kick/snare/synth curve
+          const bandNorm = i / (BAR_COUNT - 1);
+          const lowWeight  = Math.max(0, 1 - bandNorm * 2.2);
+          const midWeight  = Math.sin(bandNorm * Math.PI);
+          const highWeight = Math.max(0, (bandNorm - 0.45) * 1.8);
+
+          const synthSwell = (Math.sin(sec * 1.3 + i * 0.38) * 0.5 + 0.5) * 34 * midWeight;
+          const hatShimmer = (Math.sin(sec * 4.2 + i * 0.9) * 0.5 + 0.5) * 24 * highWeight;
+          const kickLift   = kickPulse * 68 * (0.35 + 0.65 * lowWeight);
+          const snareLift  = snarePulse * 46 * (0.4 * midWeight + 0.6 * highWeight);
+
+          targetPct = Math.min(94, 10 + kickLift + snareLift + synthSwell + hatShimmer);
+        } else {
+          // HUD Idle / Paused State: Slow, calm ambient breathing wave (not rapid!)
+          const slowWave = Math.sin(sec * 1.1 + i * 0.32) * 0.5 + 0.5;
+          const arch = 1 - Math.abs((i - (BAR_COUNT - 1) * 0.5) / (BAR_COUNT * 0.5)) * 0.45;
+          targetPct = 9 + slowWave * 22 * arch;
         }
 
-        // Fast attack, controlled fall rate
+        // Smooth attack and natural decay
         if (targetPct > barHeights[i]) {
-          barHeights[i] += (targetPct - barHeights[i]) * 0.55;
+          barHeights[i] += (targetPct - barHeights[i]) * 0.45;
         } else {
-          barHeights[i] += (targetPct - barHeights[i]) * 0.22;
+          barHeights[i] += (targetPct - barHeights[i]) * 0.16;
         }
 
         if (barHeights[i] > capHeights[i]) {
           capHeights[i] = barHeights[i];
         } else {
-          capHeights[i] = Math.max(barHeights[i], capHeights[i] - 0.9);
+          capHeights[i] = Math.max(barHeights[i], capHeights[i] - 0.65);
         }
 
         bars[i].style.height = barHeights[i].toFixed(1) + '%';
@@ -565,7 +589,7 @@
       }
 
       const avgBass = bassEnergy / 5;
-      const scale = 1 + Math.max(0, (avgBass - 45) / 350);
+      const scale = 1 + Math.max(0, (avgBass - 45) / 360);
       ggBadge.style.transform = 'scale(' + scale.toFixed(3) + ')';
     }
 
