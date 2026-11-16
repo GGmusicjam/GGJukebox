@@ -440,7 +440,6 @@
       audio.volume = 0;
       hudControls.style.display = 'none';
       modeStatus.textContent = 'VISUAL DISPLAY MODE (HUD AUDIO)';
-      // Guard against any browser autoplay unmute attempts on the wall board
       audio.addEventListener('volumechange', () => {
         if (!audio.muted || audio.volume !== 0) {
           audio.muted = true;
@@ -533,8 +532,8 @@
 
       // Musical 126 BPM beat clock for the permanently muted wall board (2.1 beats/sec)
       const beatPhase = (sec * 2.1) % 1.0;
-      const barPhase  = (sec * 0.525) % 4.0; // 4-beat bar (0..4)
-      const kickPulse = Math.pow(Math.max(0, 1 - beatPhase * 2.4), 2.2); // Punchy quarter-note kick
+      const barPhase  = (sec * 0.525) % 4.0;
+      const kickPulse = Math.pow(Math.max(0, 1 - beatPhase * 2.4), 2.2);
       const isSnareBeat = (Math.floor(barPhase) === 1 || Math.floor(barPhase) === 3);
       const snarePulse = isSnareBeat ? Math.pow(Math.max(0, 1 - beatPhase * 3.0), 2.0) : 0;
 
@@ -542,7 +541,7 @@
         let targetPct = 8;
 
         if (hasLiveSignal) {
-          // Live HUD Audio FFT: skip sub-bass rumble bins 0-3 and map punchy EDM mids/highs
+          // Live HUD Audio FFT: untouched!
           const binIndex = Math.min(freqData.length - 1, i + 4);
           let norm = freqData[binIndex] / 255;
           if (i < 3) norm *= 0.78;
@@ -552,7 +551,7 @@
             targetPct = Math.min(98, 22 + Math.pow((norm - 0.48) / 0.52, 0.85) * 76);
           }
         } else if (isWallMuted) {
-          // Wall Display (&mute=1): Realistic, non-rapid 126 BPM EDM kick/snare/synth curve
+          // Wall Display (&mute=1): untouched!
           const bandNorm = i / (BAR_COUNT - 1);
           const lowWeight  = Math.max(0, 1 - bandNorm * 2.2);
           const midWeight  = Math.sin(bandNorm * Math.PI);
@@ -565,13 +564,11 @@
 
           targetPct = Math.min(94, 10 + kickLift + snareLift + synthSwell + hatShimmer);
         } else {
-          // HUD Idle / Paused State: Slow, calm ambient breathing wave (not rapid!)
-          const slowWave = Math.sin(sec * 1.1 + i * 0.32) * 0.5 + 0.5;
-          const arch = 1 - Math.abs((i - (BAR_COUNT - 1) * 0.5) / (BAR_COUNT * 0.5)) * 0.45;
-          targetPct = 9 + slowWave * 22 * arch;
+          // HUD Idle / Paused State: Smooth, low-profile rolling sine wave
+          const wave = Math.sin(sec * 1.6 - i * 0.42) * 0.5 + 0.5;
+          targetPct = 8 + wave * 16;
         }
 
-        // Smooth attack and natural decay
         if (targetPct > barHeights[i]) {
           barHeights[i] += (targetPct - barHeights[i]) * 0.45;
         } else {
