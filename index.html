@@ -527,15 +527,8 @@
         }
       }
 
-      const sec = performance.now() * 0.001;
+     const sec = performance.now() * 0.001;
       let bassEnergy = 0;
-
-      // Musical 126 BPM beat clock for the permanently muted wall board (2.1 beats/sec)
-      const beatPhase = (sec * 2.1) % 1.0;
-      const barPhase  = (sec * 0.525) % 4.0;
-      const kickPulse = Math.pow(Math.max(0, 1 - beatPhase * 2.4), 2.2);
-      const isSnareBeat = (Math.floor(barPhase) === 1 || Math.floor(barPhase) === 3);
-      const snarePulse = isSnareBeat ? Math.pow(Math.max(0, 1 - beatPhase * 3.0), 2.0) : 0;
 
       for (let i = 0; i < BAR_COUNT; i++) {
         let targetPct = 8;
@@ -550,21 +543,8 @@
           } else {
             targetPct = Math.min(98, 22 + Math.pow((norm - 0.48) / 0.52, 0.85) * 76);
           }
-        } else if (isWallMuted) {
-          // Wall Display (&mute=1): untouched!
-          const bandNorm = i / (BAR_COUNT - 1);
-          const lowWeight  = Math.max(0, 1 - bandNorm * 2.2);
-          const midWeight  = Math.sin(bandNorm * Math.PI);
-          const highWeight = Math.max(0, (bandNorm - 0.45) * 1.8);
-
-          const synthSwell = (Math.sin(sec * 1.3 + i * 0.38) * 0.5 + 0.5) * 34 * midWeight;
-          const hatShimmer = (Math.sin(sec * 4.2 + i * 0.9) * 0.5 + 0.5) * 24 * highWeight;
-          const kickLift   = kickPulse * 68 * (0.35 + 0.65 * lowWeight);
-          const snareLift  = snarePulse * 46 * (0.4 * midWeight + 0.6 * highWeight);
-
-          targetPct = Math.min(94, 10 + kickLift + snareLift + synthSwell + hatShimmer);
         } else {
-          // HUD Idle / Paused State: Smooth, low-profile rolling sine wave
+          // Both Wall Display (&mute=1) and HUD Idle: Smooth, low-profile rolling sine wave
           const wave = Math.sin(sec * 1.6 - i * 0.42) * 0.5 + 0.5;
           targetPct = 8 + wave * 16;
         }
