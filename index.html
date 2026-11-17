@@ -204,7 +204,7 @@
       transition: transform 0.1s ease-out;
     }
 
-    /* Expanded Equalizer Visualizer Stage (fills free space) */
+    /* Expanded Equalizer Visualizer Stage */
     .viz-stage {
       width: 100%;
       flex: 1;
@@ -363,14 +363,43 @@
   <audio id="audioPlayer" crossorigin="anonymous" preload="auto"></audio>
 
   <script>
-    const params      = new URLSearchParams(window.location.search);
-    const streamUrl   = params.get('url') || '';
-    const trackName   = params.get('name') || 'GG LIVE STREAM';
-    const startOffset = parseFloat(params.get('t') || '0');
-    const syncStamp   = parseFloat(params.get('sync') || '0');
-    // Default to 25% if no vol parameter is provided
-    const initVol     = Math.min(100, Math.max(0, parseInt(params.get('vol') || '25', 10)));
-    const isWallMuted = params.get('mute') === '1';
+    const params         = new URLSearchParams(window.location.search);
+    const streamUrl      = params.get('url') || '';
+    const trackName      = params.get('name') || 'GG LIVE STREAM';
+    const startOffset    = parseFloat(params.get('t') || '0');
+    const syncStamp      = parseFloat(params.get('sync') || '0');
+    // Room/Zone default volume passed from GGJuke (fallback 25%)
+    const zoneDefaultVol = Math.min(100, Math.max(0, parseInt(params.get('vol') || '25', 10)));
+    const isWallMuted    = params.get('mute') === '1';
+
+    // Personal HUD volume stored locally in each listener's own viewer so track changes & other HUDs never reset it
+    const STORAGE_VOL_KEY  = 'ggjukebox_personal_vol';
+    const STORAGE_MUTE_KEY = 'ggjukebox_personal_mute';
+
+    function getSavedPersonalVol() {
+      try {
+        const saved = localStorage.getItem(STORAGE_VOL_KEY);
+        if (saved !== null && saved !== '') {
+          const parsed = parseInt(saved, 10);
+          if (!isNaN(parsed)) return Math.min(100, Math.max(0, parsed));
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    function getSavedPersonalMute() {
+      try {
+        return localStorage.getItem(STORAGE_MUTE_KEY) === '1';
+      } catch (e) {}
+      return false;
+    }
+
+    function savePersonalAudioState(volPct, mutedBool) {
+      try {
+        localStorage.setItem(STORAGE_VOL_KEY, String(volPct));
+        localStorage.setItem(STORAGE_MUTE_KEY, mutedBool ? '1' : '0');
+      } catch (e) {}
+    }
 
     const audio        = document.getElementById('audioPlayer');
     const trackTitleEl = document.getElementById('trackTitle');
@@ -389,10 +418,11 @@
     trackTitleEl.textContent = trackName;
 
     // Gentle perceptual volume curve so 25% is safe on speakers and 100% still scales smoothly
-    function applySafeVolume(pct) {
+    function applySafeVolume(pct, forceMute) {
       const clamped = Math.min(100, Math.max(0, pct));
-      audio.muted = (clamped === 0);
-      audio.volume = Math.pow(clamped / 100, 1.45) * 0.75;
+      const isMuted = Boolean(forceMute) || (clamped === 0);
+      audio.muted = isMuted;
+      audio.volume = isMuted ? 0 : Math.pow(clamped / 100, 1.45) * 0.75;
     }
 
     // Build 22 alternating pink/purple equalizer bars with white peak caps
@@ -458,29 +488,36 @@
         }
       });
     } else {
-      applySafeVolume(initVol);
-      volSlider.value = initVol;
-      volLabel.textContent = initVol + '%';
+      const personalVol  = getSavedPersonalVol();
+      const personalMute = getSavedPersonalMute();
+      const activeVol    = (personalVol !== null) ? personalVol : zoneDefaultVol;
+
+      applySafeVolume(activeVol, personalMute);
+      volSlider.value = activeVol;
+      volLabel.textContent = personalMute ? '0%' : (activeVol + '%');
+      muteBtn.innerHTML = (personalMute || activeVol === 0) ? '&#x1F507;' : '&#x1F50A;';
     }
 
     volSlider.addEventListener('input', () => {
       if (isWallMuted) return;
       const val = parseInt(volSlider.value, 10);
-      applySafeVolume(val);
+      applySafeVolume(val, val === 0);
+      savePersonalAudioState(val, val === 0);
       volLabel.textContent = val + '%';
       muteBtn.innerHTML = val === 0 ? '&#x1F507;' : '&#x1F50A;';
     });
 
     muteBtn.addEventListener('click', () => {
       if (isWallMuted) return;
-      audio.muted = !audio.muted;
-      if (audio.muted) {
+      const nextMuted = !audio.muted;
+      const sliderVal = parseInt(volSlider.value, 10) || zoneDefaultVol || 25;
+      applySafeVolume(sliderVal, nextMuted);
+      savePersonalAudioState(sliderVal, nextMuted);
+      if (nextMuted) {
         volLabel.textContent = '0%';
         muteBtn.innerHTML = '&#x1F507;';
       } else {
-        const val = parseInt(volSlider.value, 10) || 25;
-        applySafeVolume(val);
-        volLabel.textContent = val + '%';
+        volLabel.textContent = sliderVal + '%';
         muteBtn.innerHTML = '&#x1F50A;';
       }
     });
