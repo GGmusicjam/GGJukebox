@@ -368,11 +368,9 @@
     const trackName      = params.get('name') || 'GG LIVE STREAM';
     const startOffset    = parseFloat(params.get('t') || '0');
     const syncStamp      = parseFloat(params.get('sync') || '0');
-    // Room/Zone default volume passed from GGJuke (fallback 25%)
     const zoneDefaultVol = Math.min(100, Math.max(0, parseInt(params.get('vol') || '25', 10)));
     const isWallMuted    = params.get('mute') === '1';
 
-    // Personal HUD volume stored locally in each listener's own viewer so track changes & other HUDs never reset it
     const STORAGE_VOL_KEY  = 'ggjukebox_personal_vol';
     const STORAGE_MUTE_KEY = 'ggjukebox_personal_mute';
 
@@ -417,7 +415,6 @@
 
     trackTitleEl.textContent = trackName;
 
-    // Gentle perceptual volume curve so 25% is safe on speakers and 100% still scales smoothly
     function applySafeVolume(pct, forceMute) {
       const clamped = Math.min(100, Math.max(0, pct));
       const isMuted = Boolean(forceMute) || (clamped === 0);
@@ -425,7 +422,6 @@
       audio.volume = isMuted ? 0 : Math.pow(clamped / 100, 1.45) * 0.75;
     }
 
-    // Build 22 alternating pink/purple equalizer bars with white peak caps
     const BAR_COUNT = 22;
     const bars = [];
     const caps = [];
@@ -545,8 +541,8 @@
         audioCtx = new AudioContextClass();
         const src = audioCtx.createMediaElementSource(audio);
         analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 128;
-        analyser.smoothingTimeConstant = 0.72;
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.68;
         src.connect(analyser);
         analyser.connect(audioCtx.destination);
         freqData = new Uint8Array(analyser.frequencyBinCount);
@@ -562,7 +558,7 @@
       let hasLiveSignal = false;
       if (!isWallMuted && analyserReady && analyser && !audio.paused) {
         analyser.getByteFrequencyData(freqData);
-        for (let k = 0; k < 24; k++) {
+        for (let k = 0; k < 48; k++) {
           if (freqData[k] > 5) {
             hasLiveSignal = true;
             break;
@@ -577,13 +573,35 @@
         let targetPct = 8;
 
         if (hasLiveSignal) {
-          const binIndex = Math.min(freqData.length - 1, i + 4);
-          let norm = freqData[binIndex] / 255;
-          if (i < 3) norm *= 0.78;
-          if (norm < 0.48) {
-            targetPct = 8 + norm * 18;
+          let norm = 0;
+          let gate = 0.40;
+
+          if (i < 7) {
+            // Bars 0-6 (7 bars): BASS & KICK (bins 2..8)
+            const bin = 2 + i;
+            norm = (freqData[bin] / 255) * 0.78;
+            gate = 0.52;
+          } else if (i < 15) {
+            // Bars 7-14 (8 bars): MIDS, VOCALS & SYNTHS (bins 10..24)
+            const midIdx = i - 7;
+            const bin = 10 + midIdx * 2;
+            norm = (freqData[bin] / 255) * 1.15;
+            gate = 0.36;
           } else {
-            targetPct = Math.min(98, 22 + Math.pow((norm - 0.48) / 0.52, 0.85) * 76);
+            // Bars 15-21 (7 bars): TREBLE, HI-HATS & SNARES (bins 28..52)
+            const highIdx = i - 15;
+            const bin = Math.min(freqData.length - 1, 28 + highIdx * 4);
+            norm = (freqData[bin] / 255) * 1.75;
+            gate = 0.22;
+          }
+
+          norm = Math.min(1.0, norm);
+
+          if (norm < gate) {
+            targetPct = 8 + (norm / gate) * 10;
+          } else {
+            const activeRatio = (norm - gate) / (1.0 - gate);
+            targetPct = Math.min(98, 18 + Math.pow(activeRatio, 0.85) * 80);
           }
         } else {
           // Both Wall Display (&mute=1) and HUD Idle: Smooth, low-profile rolling sine wave
