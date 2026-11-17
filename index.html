@@ -542,7 +542,7 @@
         const src = audioCtx.createMediaElementSource(audio);
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.68;
+        analyser.smoothingTimeConstant = 0.86;
         src.connect(analyser);
         analyser.connect(audioCtx.destination);
         freqData = new Uint8Array(analyser.frequencyBinCount);
@@ -569,39 +569,35 @@
       const sec = performance.now() * 0.001;
       let bassEnergy = 0;
 
+      // Compute ONE smooth averaged energy value for each of the 3 sections
+      let bassSum = 0, midSum = 0, highSum = 0;
+      if (hasLiveSignal) {
+        for (let b = 2; b <= 7; b++) bassSum += freqData[b];
+        for (let m = 10; m <= 24; m++) midSum += freqData[m];
+        for (let h = 28; h <= 52; h++) highSum += freqData[h];
+      }
+
+      // Single normalized level (0.0 to 1.0) per third, with soft power curve (no hard gate jumps)
+      const bassLevel = Math.min(1.0, Math.pow((bassSum / (6 * 255)) * 0.85, 1.35));
+      const midLevel  = Math.min(1.0, Math.pow((midSum  / (15 * 255)) * 1.25, 1.25));
+      const highLevel = Math.min(1.0, Math.pow((highSum / (25 * 255)) * 1.85, 1.15));
+
       for (let i = 0; i < BAR_COUNT; i++) {
         let targetPct = 8;
 
         if (hasLiveSignal) {
-          let norm = 0;
-          let gate = 0.40;
-
           if (i < 7) {
-            // Bars 0-6 (7 bars): BASS & KICK (bins 2..8)
-            const bin = 2 + i;
-            norm = (freqData[bin] / 255) * 1.2;
-            gate = 0.15;
+            // Bars 0-6 (7 bars): Unified Bass wave (center of group arches smoothly higher)
+            const shape = 0.72 + 0.28 * Math.sin((i / 6) * Math.PI);
+            targetPct = 8 + bassLevel * 84 * shape;
           } else if (i < 15) {
-            // Bars 7-14 (8 bars): MIDS, VOCALS & SYNTHS (bins 10..24)
-            const midIdx = i - 7;
-            const bin = 10 + midIdx * 2;
-            norm = (freqData[bin] / 255) * 1.3;
-            gate = 0.15;
+            // Bars 7-14 (8 bars): Unified Mid/Vocal wave
+            const shape = 0.72 + 0.28 * Math.sin(((i - 7) / 7) * Math.PI);
+            targetPct = 8 + midLevel * 84 * shape;
           } else {
-            // Bars 15-21 (7 bars): TREBLE, HI-HATS & SNARES (bins 28..52)
-            const highIdx = i - 15;
-            const bin = Math.min(freqData.length - 1, 28 + highIdx * 4);
-            norm = (freqData[bin] / 255) * 1.1;
-            gate = 0.15;
-          }
-
-          norm = Math.min(1.0, norm);
-
-          if (norm < gate) {
-            targetPct = 8 + (norm / gate) * 10;
-          } else {
-            const activeRatio = (norm - gate) / (1.0 - gate);
-            targetPct = Math.min(98, 18 + Math.pow(activeRatio, 0.85) * 80);
+            // Bars 15-21 (7 bars): Unified Treble/Hi-Hat wave
+            const shape = 0.72 + 0.28 * Math.sin(((i - 15) / 6) * Math.PI);
+            targetPct = 8 + highLevel * 84 * shape;
           }
         } else {
           // Both Wall Display (&mute=1) and HUD Idle: Smooth, low-profile rolling sine wave
@@ -609,16 +605,17 @@
           targetPct = 8 + wave * 16;
         }
 
+        // Silky, jitter-free rise & fall interpolation
         if (targetPct > barHeights[i]) {
-          barHeights[i] += (targetPct - barHeights[i]) * 0.45;
+          barHeights[i] += (targetPct - barHeights[i]) * 0.18;
         } else {
-          barHeights[i] += (targetPct - barHeights[i]) * 0.16;
+          barHeights[i] += (targetPct - barHeights[i]) * 0.10;
         }
 
         if (barHeights[i] > capHeights[i]) {
           capHeights[i] = barHeights[i];
         } else {
-          capHeights[i] = Math.max(barHeights[i], capHeights[i] - 0.65);
+          capHeights[i] = Math.max(barHeights[i], capHeights[i] - 0.45);
         }
 
         bars[i].style.height = barHeights[i].toFixed(1) + '%';
